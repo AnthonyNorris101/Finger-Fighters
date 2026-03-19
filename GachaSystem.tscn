@@ -1,3 +1,6 @@
 [gd_scene format=3 uid="uid://dau5ic7onrkjl"]
 
+[ext_resource type="Script" uid="uid://dv4w3w5lqa58u" path="res://src/main/scripts/systems/GachaSystem.gd" id="1_27n3q"]
+
 [node name="Node" type="Node" unique_id=298195317]
+script = ExtResource("1_27n3q")
