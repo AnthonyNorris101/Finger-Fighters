@@ -91,7 +91,7 @@ func add(currency: Currency, amount: int) -> void:
 	var cap: int = CURRENCY_CAP.get(currency, 999_999_999)
 	var before: int = _balances[currency]
 	_balances[currency] = mini(before + amount, cap)
-	var actual_delta := _balances[currency] - before
+	var actual_delta = _balances[currency] - before
 	if actual_delta > 0:
 		balance_changed.emit(currency, _balances[currency], actual_delta)
 

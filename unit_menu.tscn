@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://dh4mliok40be0"]
+
+[node name="UnitMenu" type="Control" unique_id=583017197]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Container" type="Container" parent="." unique_id=365049474]
+layout_mode = 0
+offset_left = 288.0
+offset_right = 1440.0
+offset_bottom = 648.0
+scale = Vector2(0.5, 1)
