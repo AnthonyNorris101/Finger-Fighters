@@ -11,8 +11,13 @@ config_version=5
 [application]
 
 config/name="Finger Fighters"
+run/main_scene="uid://de62h328knsp8"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://src/main/resources/icon.svg"
+
+[autoload]
+
+ElementSystem="*uid://8gx6bjwgk5om"
 
 [physics]
 
