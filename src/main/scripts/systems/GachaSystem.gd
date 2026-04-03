@@ -15,6 +15,7 @@ const BASE_4STAR_RATE  := 0.051   # 5.1% base chance
 const SOFT_PITY_START  := 40      # Soft pity scaling begins
 const HARD_PITY        := 60      # Guaranteed 5★ at this pull count
 const GUARANTEED_4STAR := 10      # Guaranteed 4★ every 10 pulls
+const PITY_SAVE_PATH   := "user://gacha_pity.json"
 
 # ── Pity State ────────────────────────────────────────────────────────────────
 var pity_5star          : int  = 0
@@ -86,24 +87,99 @@ func has_guaranteed_featured() -> bool:
 	return guaranteed_featured
 
 
-## Serialize pity state for saving. Pass result to your SaveManager.
-func save_pity_state() -> Dictionary:
+## Serialize the current pity counters and persist them to disk.
+## The JSON file stores a master Dictionary keyed by banner_id + banner_type
+## so each banner tracks its pity independently.
+func save_pity_state(banner_id: Variant = null, banner_type: Variant = null) -> Dictionary:
+	var pity_state := _build_pity_state()
+	var master_dict := _load_pity_master_dict()
+	var banner_key := _get_banner_pity_key(banner_id, banner_type)
+
+	master_dict[banner_key] = pity_state
+
+	var save_file := FileAccess.open(PITY_SAVE_PATH, FileAccess.WRITE)
+	if save_file == null:
+		push_error("[GachaSystem] Failed to open pity save file for writing: %s" % PITY_SAVE_PATH)
+		return pity_state
+
+	save_file.store_string(JSON.stringify(master_dict, "\t"))
+	print("[GachaSystem] Pity saved for banner key: %s" % banner_key)
+	return pity_state
+
+
+## Restore pity state from disk for the requested banner.
+## Pass banner_id/banner_type when loading before load_banner(); otherwise
+## the current banner is used. The optional state Dictionary is only kept as
+## a fallback so older callers do not break if no disk entry exists yet.
+func load_pity_state(state: Dictionary = {}, banner_id: Variant = null, banner_type: Variant = null) -> void:
+	var pity_state := _get_empty_pity_state()
+	var master_dict := _load_pity_master_dict()
+	var banner_key := _get_banner_pity_key(banner_id, banner_type)
+
+	if master_dict.has(banner_key):
+		var disk_state: Variant = master_dict.get(banner_key, {})
+		if disk_state is Dictionary:
+			pity_state = disk_state
+	elif not state.is_empty():
+		pity_state = state.duplicate(true)
+
+	_apply_pity_state(pity_state)
+	print("[GachaSystem] Pity restored for banner key %s — 5star pity: %d | guaranteed: %s" \
+		% [banner_key, pity_5star, str(guaranteed_featured)])
+
+
+func _build_pity_state() -> Dictionary:
 	return {
 		"pity_5star":          pity_5star,
 		"pity_4star":          pity_4star,
 		"guaranteed_featured": guaranteed_featured,
+		"banner_id":           current_banner.get("banner_id", ""),
+		"banner_type":         current_banner.get("banner_type", ""),
 		"banner_name":         current_banner.get("name", "")
 	}
 
 
-## Restore pity state from a save Dictionary.
-## Call this on game load BEFORE calling load_banner().
-func load_pity_state(state: Dictionary) -> void:
-	pity_5star          = state.get("pity_5star", 0)
-	pity_4star          = state.get("pity_4star", 0)
-	guaranteed_featured = state.get("guaranteed_featured", false)
-	print("[GachaSystem] Pity restored — 5star pity: %d | guaranteed: %s" \
-		% [pity_5star, str(guaranteed_featured)])
+func _get_empty_pity_state() -> Dictionary:
+	return {
+		"pity_5star":          0,
+		"pity_4star":          0,
+		"guaranteed_featured": false
+	}
+
+
+func _apply_pity_state(state: Dictionary) -> void:
+	pity_5star = int(state.get("pity_5star", 0))
+	pity_4star = int(state.get("pity_4star", 0))
+	guaranteed_featured = bool(state.get("guaranteed_featured", false))
+
+
+func _get_banner_pity_key(banner_id: Variant = null, banner_type: Variant = null) -> String:
+	# Fall back to current_banner fields so existing banner Dictionaries keep
+	# working even if a caller does not pass explicit identifiers yet.
+	var resolved_banner_id: Variant = banner_id if banner_id != null else current_banner.get("banner_id", current_banner.get("name", "default_banner"))
+	var resolved_banner_type: Variant = banner_type if banner_type != null else current_banner.get("banner_type", "default_type")
+	return "%s_%s" % [str(resolved_banner_id), str(resolved_banner_type)]
+
+
+func _load_pity_master_dict() -> Dictionary:
+	if not FileAccess.file_exists(PITY_SAVE_PATH):
+		return {}
+
+	var save_file := FileAccess.open(PITY_SAVE_PATH, FileAccess.READ)
+	if save_file == null:
+		push_error("[GachaSystem] Failed to open pity save file for reading: %s" % PITY_SAVE_PATH)
+		return {}
+
+	var raw_json := save_file.get_as_text()
+	if raw_json.strip_edges().is_empty():
+		return {}
+
+	var parsed_data: Variant = JSON.parse_string(raw_json)
+	if not (parsed_data is Dictionary):
+		push_error("[GachaSystem] Pity save file is invalid JSON or not a Dictionary: %s" % PITY_SAVE_PATH)
+		return {}
+
+	return parsed_data.duplicate(true)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
