@@ -37,7 +37,7 @@ func get_stat(stat: String):
 func take_damage(amount: int, attacker_element: ElementSystem.Element, attacker_crit_dmg: float = 1.25) -> int:
 	if not is_alive:
 		return 0
-	var final_damage := ElementSystem.calculate_damage(
+	var final_damage = ElementSystem.calculate_damage(
 		amount,
 		int(get_stat("base_def")),
 		int(get_stat("base_elem_res")),

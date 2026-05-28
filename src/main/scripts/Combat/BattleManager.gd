@@ -1,6 +1,9 @@
 class_name BattleManager
 extends Node
 
+const UnitViewScript := preload("res://src/main/scripts/Combat/Presentation/UnitView.gd")
+const AttackChoreographyScript := preload("res://src/main/scripts/Combat/Presentation/AttackChoreography.gd")
+
 signal battle_log(message: String)
 signal battle_state_changed(state: String)
 signal queue_preview_changed(preview_names: Array)
@@ -25,6 +28,7 @@ const FALLBACK_ENEMY_NAMES: Array[String] = ["Mire", "Shade"]
 @export var friend_roster_paths: Array[String] = []
 @export var enemy_roster_paths: Array[String] = []
 @export var debug_logging: bool = true
+@export var battlefield_path: NodePath = NodePath("../Battlefield")
 
 var _state: BattleState = BattleState.INIT
 var _turn_queue: TurnQueueManager
@@ -36,11 +40,28 @@ var _current_actor: BattleUnit
 var _pending_targets: Array[BattleUnit] = []
 var _awaiting_player_input: bool = false
 var _battle_over: bool = false
+var _battlefield: Node2D
+var _unit_views: Dictionary = {}
+var _attack_choreography = AttackChoreographyScript.new()
+
+const ALLY_SLOTS: Array[Vector2] = [
+	Vector2(115, 93),
+	Vector2(115, 251),
+	Vector2(115, 415),
+	Vector2(115, 572),
+]
+const ENEMY_SLOTS: Array[Vector2] = [
+	Vector2(1054, 93),
+	Vector2(1054, 251),
+	Vector2(1054, 415),
+	Vector2(1054, 572),
+]
 
 
 func start_battle() -> void:
 	_initialize_queue()
 	_create_battle_rosters()
+	_spawn_unit_views()
 	_register_units()
 	_set_state(BattleState.BATTLE_START)
 	_emit_hp_snapshot()
@@ -67,7 +88,7 @@ func player_basic_attack(target_index: int) -> void:
 		return
 	_awaiting_player_input = false
 	_set_state(BattleState.ACTION_RESOLVE)
-	_resolve_basic_attack(_current_actor, target)
+	await _resolve_basic_attack(_current_actor, target)
 	_finish_turn()
 
 
@@ -197,7 +218,7 @@ func _handle_enemy_turn(actor: BattleUnit) -> void:
 		_check_battle_end()
 		return
 	var target := targets[0]
-	_resolve_basic_attack(actor, target)
+	await _resolve_basic_attack(actor, target)
 	_finish_turn()
 
 
@@ -206,14 +227,32 @@ func _resolve_basic_attack(attacker: BattleUnit, target: BattleUnit) -> void:
 		return
 	if not attacker.is_alive or not target.is_alive:
 		return
-	var damage: int = int(target.call(
+
+	var damage_state := {"value": 0}
+	var apply_damage := func() -> void:
+		damage_state["value"] = _apply_damage(attacker, target)
+
+	var attacker_view = _unit_views.get(attacker, null)
+	var target_view = _unit_views.get(target, null)
+	if attacker_view != null and target_view != null:
+		await _attack_choreography.play_basic_attack(attacker_view, target_view, apply_damage)
+	else:
+		apply_damage.call()
+
+	var damage: int = int(damage_state["value"])
+	_log("%s attacked %s for %d damage." % [_safe_unit_name(attacker), _safe_unit_name(target), damage])
+	_emit_hp_snapshot()
+	if target != null and target.is_alive == false:
+		await _play_unit_defeat(target)
+
+
+func _apply_damage(attacker: BattleUnit, target: BattleUnit) -> int:
+	return int(target.call(
 		"take_damage",
 		int(attacker.get_stat("base_atk")),
 		attacker.data.element,
 		float(attacker.get_stat("base_crit_dmg"))
 	))
-	_log("%s attacked %s for %d damage." % [_safe_unit_name(attacker), _safe_unit_name(target), damage])
-	_emit_hp_snapshot()
 
 
 func _finish_turn() -> void:
@@ -265,10 +304,23 @@ func _get_living_units(units: Array[BattleUnit]) -> Array[BattleUnit]:
 
 func _on_unit_died(unit: BattleUnit) -> void:
 	_log("%s was defeated." % _safe_unit_name(unit))
+	call_deferred("_play_unit_defeat_deferred", unit)
 	_emit_hp_snapshot()
 	_emit_queue_preview(_turn_queue.get_queue_preview())
 	_refresh_player_targets()
 	_check_battle_end()
+
+
+func _play_unit_defeat_deferred(unit: BattleUnit) -> void:
+	await _play_unit_defeat(unit)
+
+
+func _play_unit_defeat(unit: BattleUnit) -> void:
+	var view = _unit_views.get(unit, null)
+	if view == null:
+		return
+	if view.has_method("play_defeat"):
+		await view.play_defeat()
 
 
 func _on_hp_changed(_new_hp: int, _max_hp: int) -> void:
@@ -333,3 +385,40 @@ func _log(message: String) -> void:
 	if debug_logging:
 		print("[Battle] %s" % message)
 	battle_log.emit(message)
+
+
+func _spawn_unit_views() -> void:
+	_unit_views.clear()
+	_battlefield = get_node_or_null(battlefield_path)
+	if _battlefield == null:
+		_log("No battlefield node found at %s. Running without sprite choreography." % String(battlefield_path))
+		return
+
+	var ally_index := 0
+	var enemy_index := 0
+	for unit in _all_units:
+		if unit == null or unit.data == null:
+			continue
+		var is_friend := unit.data.is_friend
+		var slot := _resolve_slot_position(is_friend, ally_index if is_friend else enemy_index)
+		var face_right := is_friend
+		if is_friend:
+			ally_index += 1
+		else:
+			enemy_index += 1
+
+		var unit_view = UnitViewScript.new()
+		_battlefield.add_child(unit_view)
+		var texture := unit.data.sprite if unit.data != null else null
+		unit_view.setup(texture, slot, face_right)
+		_unit_views[unit] = unit_view
+
+
+func _resolve_slot_position(is_friend: bool, index: int) -> Vector2:
+	var slots := ALLY_SLOTS if is_friend else ENEMY_SLOTS
+	if index < slots.size():
+		return slots[index]
+	var overflow := index - slots.size() + 1
+	var last_slot: Vector2 = slots[slots.size() - 1]
+	var y_offset := float(overflow * 80)
+	return last_slot + Vector2(0.0, y_offset)

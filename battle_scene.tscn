@@ -1,11 +1,60 @@
-[gd_scene load_steps=4 format=3 uid="uid://b56jcp3vwgmqt"]
+[gd_scene format=3 uid="uid://bbnfypb1p7rvw"]
 
 [ext_resource type="Script" uid="uid://dthd1e5073e5n" path="res://src/main/scripts/Combat/BattleManager.gd" id="1_fw8re"]
-[ext_resource type="Script" uid="uid://dqm3h8k2n7w4p" path="res://src/main/scripts/Combat/battle_scene.gd" id="2_battle"]
+[ext_resource type="Texture2D" uid="uid://cvkmcgdn65omo" path="res://src/main/resources/icon.svg" id="2_5joda"]
+[ext_resource type="Script" path="res://src/main/scripts/Combat/battle_scene.gd" id="2_battle"]
 [ext_resource type="PackedScene" uid="uid://c4k2m8n7p1q5w" path="res://src/main/scenes/Combat/BattleHUD.tscn" id="3_hud"]
 
 [node name="BattleScene" type="Node" unique_id=541078792]
 script = ExtResource("2_battle")
+
+[node name="Icon5" type="Sprite2D" parent="." unique_id=1941309718]
+visible = false
+z_index = 2
+position = Vector2(1052, 566)
+texture = ExtResource("2_5joda")
+
+[node name="Icon6" type="Sprite2D" parent="." unique_id=1339639658]
+visible = false
+z_index = 2
+position = Vector2(1050, 409)
+texture = ExtResource("2_5joda")
+
+[node name="Icon7" type="Sprite2D" parent="." unique_id=1184050686]
+visible = false
+z_index = 2
+position = Vector2(1052, 245)
+texture = ExtResource("2_5joda")
+
+[node name="Icon8" type="Sprite2D" parent="." unique_id=1106254012]
+visible = false
+z_index = 2
+position = Vector2(1054, 87)
+texture = ExtResource("2_5joda")
+
+[node name="Icon4" type="Sprite2D" parent="." unique_id=985403885]
+visible = false
+z_index = 2
+position = Vector2(113, 572)
+texture = ExtResource("2_5joda")
+
+[node name="Icon3" type="Sprite2D" parent="." unique_id=830506605]
+visible = false
+z_index = 2
+position = Vector2(111, 415)
+texture = ExtResource("2_5joda")
+
+[node name="Icon2" type="Sprite2D" parent="." unique_id=845781470]
+visible = false
+z_index = 2
+position = Vector2(113, 251)
+texture = ExtResource("2_5joda")
+
+[node name="Icon" type="Sprite2D" parent="." unique_id=519604270]
+visible = false
+z_index = 2
+position = Vector2(115, 93)
+texture = ExtResource("2_5joda")
 
 [node name="Root" type="Node2D" parent="." unique_id=1151577181]
 
@@ -21,11 +70,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
-[node name="BattleHUD" parent="UI" instance=ExtResource("3_hud")]
+[node name="BattleHUD" parent="UI" unique_id=1822256725 instance=ExtResource("3_hud")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
