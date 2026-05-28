@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3 uid="uid://b56jcp3vwgmqt"]
+
+[ext_resource type="Script" uid="uid://dthd1e5073e5n" path="res://src/main/scripts/Combat/BattleManager.gd" id="1_fw8re"]
+[ext_resource type="Script" uid="uid://dqm3h8k2n7w4p" path="res://src/main/scripts/Combat/battle_scene.gd" id="2_battle"]
+[ext_resource type="PackedScene" uid="uid://c4k2m8n7p1q5w" path="res://src/main/scenes/Combat/BattleHUD.tscn" id="3_hud"]
+
+[node name="BattleScene" type="Node" unique_id=541078792]
+script = ExtResource("2_battle")
+
+[node name="Root" type="Node2D" parent="." unique_id=1151577181]
+
+[node name="BattleManager" type="Node" parent="." unique_id=844452604]
+script = ExtResource("1_fw8re")
+
+[node name="Battlefield" type="Node2D" parent="." unique_id=1330535996]
+
+[node name="UI" type="Control" parent="." unique_id=2057768873]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BattleHUD" parent="UI" instance=ExtResource("3_hud")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2

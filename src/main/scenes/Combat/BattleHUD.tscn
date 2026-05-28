@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3 uid="uid://c4k2m8n7p1q5w"]
+
+[ext_resource type="Script" uid="uid://duvuffi2ij4o4" path="res://src/main/scripts/Combat/BattleHUD.gd" id="1_hud"]
+
+[node name="BattleHUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainColumn" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="StateLabel" type="Label" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+text = "State: INIT"
+
+[node name="QueueLabel" type="Label" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+text = "Queue: -"
+
+[node name="HpLabel" type="Label" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+text = "HP Snapshot: -"
+
+[node name="ActionTitle" type="Label" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+text = "Player Action"
+
+[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+
+[node name="LogLabel" type="RichTextLabel" parent="MarginContainer/MainColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+fit_content = true
+scroll_active = true
+text = "Battle log ready."
