@@ -2,78 +2,124 @@
 
 [ext_resource type="Script" uid="uid://duvuffi2ij4o4" path="res://src/main/scripts/Combat/BattleHUD.gd" id="1_hud"]
 
-[node name="BattleHUD" type="Control" unique_id=762737042]
+[node name="BattleHUD" type="Control" unique_id=779878276]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_hud")
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1973576084]
-layout_mode = 1
+[node name="WorldHpLayer" type="CanvasLayer" parent="." unique_id=1314900581]
+layer = 10
+
+[node name="HpTagContainer" type="Control" parent="WorldHpLayer" unique_id=2126659348]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+mouse_filter = 2
 
-[node name="MainColumn" type="VBoxContainer" parent="MarginContainer" unique_id=2051677304]
+[node name="TopCenterPanel" type="VBoxContainer" parent="." unique_id=1331253443]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 16.0
+offset_right = 280.0
+offset_bottom = 120.0
+grow_horizontal = 2
+
+[node name="QueueLabel" type="Label" parent="TopCenterPanel" unique_id=815190703]
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_font_sizes/font_size = 18
+text = "Turn Queue: -"
+horizontal_alignment = 1
 
-[node name="StateLabel" type="Label" parent="MarginContainer/MainColumn" unique_id=1385582633]
+[node name="ActionTitleLabel" type="Label" parent="TopCenterPanel" unique_id=526705463]
 layout_mode = 2
-text = "State: INIT"
+theme_override_font_sizes/font_size = 16
+text = "Waiting..."
+horizontal_alignment = 1
 
-[node name="QueueLabel" type="Label" parent="MarginContainer/MainColumn" unique_id=67568811]
+[node name="PhasePopup" type="PanelContainer" parent="." unique_id=1762099248]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -36.0
+offset_right = 160.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PhasePopupLabel" type="Label" parent="PhasePopup" unique_id=481687567]
 layout_mode = 2
-text = "Queue: -"
+theme_override_font_sizes/font_size = 28
+text = "Your Turn"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="HpLabel" type="Label" parent="MarginContainer/MainColumn" unique_id=91266141]
+[node name="ActionButtonsPanel" type="HBoxContainer" parent="." unique_id=969654884]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = -392.0
+offset_right = 320.0
+offset_bottom = -344.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="ButtonRow" type="HBoxContainer" parent="ActionButtonsPanel" unique_id=1794077607]
 layout_mode = 2
-text = "HP Snapshot: -"
+theme_override_constants/separation = 12
+alignment = 1
 
-[node name="ActionTitle" type="Label" parent="MarginContainer/MainColumn" unique_id=182118387]
-layout_mode = 2
-text = "Player Action"
-
-[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/MainColumn" unique_id=896353329]
-layout_mode = 2
-
-[node name="LogPanel" type="PanelContainer" parent="." unique_id=810059053]
-unique_name_in_owner = true
+[node name="LogPanel" type="PanelContainer" parent="." unique_id=1967036538]
 custom_minimum_size = Vector2(520, 300)
 layout_mode = 1
-offset_left = 350.0
-offset_top = 350.0
-offset_right = 870.0
-offset_bottom = 650.0
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -300.0
+offset_right = 260.0
+grow_horizontal = 2
+grow_vertical = 0
 
-[node name="LogMargin" type="MarginContainer" parent="LogPanel" unique_id=224742286]
+[node name="LogMargin" type="MarginContainer" parent="LogPanel" unique_id=1472462262]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="LogColumn" type="VBoxContainer" parent="LogPanel/LogMargin" unique_id=108448512]
+[node name="LogColumn" type="VBoxContainer" parent="LogPanel/LogMargin" unique_id=2004489341]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="LogTitleLabel" type="Label" parent="LogPanel/LogMargin/LogColumn" unique_id=393853812]
-unique_name_in_owner = true
+[node name="LogTitleLabel" type="Label" parent="LogPanel/LogMargin/LogColumn" unique_id=1753097194]
 layout_mode = 2
 text = "Battle Log"
 
-[node name="LogLabel" type="RichTextLabel" parent="LogPanel/LogMargin/LogColumn" unique_id=191977371]
-unique_name_in_owner = true
+[node name="LogLabel" type="RichTextLabel" parent="LogPanel/LogMargin/LogColumn" unique_id=2074240944]
 layout_mode = 2
 size_flags_vertical = 3

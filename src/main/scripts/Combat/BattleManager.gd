@@ -8,6 +8,9 @@ signal battle_log(message: String)
 signal battle_state_changed(state: String)
 signal queue_preview_changed(preview_names: Array)
 signal hp_snapshot_changed(lines: Array)
+signal unit_hp_changed(unit: BattleUnit, current_hp: int, max_hp: int)
+signal turn_phase_changed(phase: String)
+signal unit_views_ready()
 signal player_turn_started(actor_name: String, target_names: Array)
 signal battle_ended(victory: bool)
 
@@ -43,6 +46,7 @@ var _battle_over: bool = false
 var _battlefield: Node2D
 var _unit_views: Dictionary = {}
 var _attack_choreography = AttackChoreographyScript.new()
+var _last_turn_phase: String = ""
 
 const ALLY_SLOTS: Array[Vector2] = [
 	Vector2(115, 93),
@@ -63,6 +67,8 @@ func start_battle() -> void:
 	_create_battle_rosters()
 	_spawn_unit_views()
 	_register_units()
+	_emit_all_unit_hp()
+	unit_views_ready.emit()
 	_set_state(BattleState.BATTLE_START)
 	_emit_hp_snapshot()
 	_emit_queue_preview(_turn_queue.get_queue_preview())
@@ -180,7 +186,7 @@ func _add_unit(data: UnitData) -> void:
 	unit.data = data
 	unit.setup()
 	unit.unit_died.connect(_on_unit_died.bind(unit))
-	unit.hp_changed.connect(_on_hp_changed)
+	unit.hp_changed.connect(_on_unit_hp_changed.bind(unit))
 	add_child(unit)
 	_all_units.append(unit)
 	if data.is_friend:
@@ -198,6 +204,7 @@ func _register_units() -> void:
 
 
 func _handle_player_turn(actor: BattleUnit) -> void:
+	_emit_turn_phase("PLAYER")
 	_set_state(BattleState.ACTION_SELECT)
 	_pending_targets = _get_living_units(_enemies)
 	if _pending_targets.is_empty():
@@ -212,6 +219,7 @@ func _handle_player_turn(actor: BattleUnit) -> void:
 
 
 func _handle_enemy_turn(actor: BattleUnit) -> void:
+	_emit_turn_phase("ENEMY")
 	_set_state(BattleState.ACTION_RESOLVE)
 	var targets := _get_living_units(_friends)
 	if targets.is_empty():
@@ -323,8 +331,37 @@ func _play_unit_defeat(unit: BattleUnit) -> void:
 		await view.play_defeat()
 
 
-func _on_hp_changed(_new_hp: int, _max_hp: int) -> void:
+func _on_unit_hp_changed(new_hp: int, max_hp: int, unit: BattleUnit) -> void:
+	_emit_unit_hp(unit, new_hp, max_hp)
 	_emit_hp_snapshot()
+
+
+func get_all_battle_units() -> Array[BattleUnit]:
+	return _all_units.duplicate()
+
+
+func get_unit_view(unit: BattleUnit) -> Node2D:
+	return _unit_views.get(unit, null) as Node2D
+
+
+func _emit_unit_hp(unit: BattleUnit, current_hp: int, max_hp: int) -> void:
+	if unit == null or not is_instance_valid(unit):
+		return
+	unit_hp_changed.emit(unit, current_hp, max_hp)
+
+
+func _emit_all_unit_hp() -> void:
+	for unit in _all_units:
+		if unit == null or not is_instance_valid(unit):
+			continue
+		_emit_unit_hp(unit, unit.current_hp, unit.max_hp)
+
+
+func _emit_turn_phase(phase: String) -> void:
+	if phase == _last_turn_phase:
+		return
+	_last_turn_phase = phase
+	turn_phase_changed.emit(phase)
 
 
 func _on_queue_turn_started(unit: BattleUnit) -> void:
