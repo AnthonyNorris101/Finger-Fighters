@@ -2,6 +2,9 @@ extends Node
 
 class_name TurnQueue
 
+# Legacy prototype queue. Combat runtime now uses TurnQueueManager.
+# Keep this script only for historical reference until fully removed.
+
 var active_character
 
 func init() -> void:
@@ -17,4 +20,4 @@ func play_turn():
 	active_character = get_child(new_index)
 
 func get_battlers():
-	return self.childre
+	return self.children

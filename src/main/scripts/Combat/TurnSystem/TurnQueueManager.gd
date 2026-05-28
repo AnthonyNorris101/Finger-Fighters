@@ -109,8 +109,8 @@ func _pop_next_unit() -> BattleUnit:
 
 # Tiebreak: higher SPD first → friends before enemies
 func _tiebreak_sort(a: BattleUnit, b: BattleUnit) -> bool:
-	var spd_a := a.get_stat("base_spd")
-	var spd_b := b.get_stat("base_spd")
+	var spd_a = a.get_stat("base_spd")
+	var spd_b = b.get_stat("base_spd")
 	if spd_a != spd_b:
 		return spd_a > spd_b
 	# Same speed: friendly units act before enemies

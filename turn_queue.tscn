@@ -1,8 +1,10 @@
 [gd_scene format=3 uid="uid://de62h328knsp8"]
 
 [ext_resource type="Texture2D" uid="uid://cvkmcgdn65omo" path="res://src/main/resources/icon.svg" id="1_aow2q"]
+[ext_resource type="Script" uid="uid://cu3280f3f0xjv" path="res://run.gd" id="1_kgg5g"]
 
 [node name="TurnQueue" type="Node2D" unique_id=651271599]
+script = ExtResource("1_kgg5g")
 
 [node name="Gobot" type="Sprite2D" parent="." unique_id=663173519]
 position = Vector2(81, 73)
@@ -16,6 +18,8 @@ texture = ExtResource("1_aow2q")
 position = Vector2(94, 367)
 texture = ExtResource("1_aow2q")
 
-[node name="Gobot4" type="Sprite2D" parent="." unique_id=974739322]
+[node name="UnitName" type="Node2D" parent="." unique_id=724185850]
+
+[node name="Gobot4" type="Sprite2D" parent="UnitName" unique_id=974739322]
 position = Vector2(99, 508)
 texture = ExtResource("1_aow2q")
