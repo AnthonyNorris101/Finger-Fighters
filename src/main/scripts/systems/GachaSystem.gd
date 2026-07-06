@@ -14,7 +14,7 @@ const BASE_5STAR_RATE  := 0.020   # 2.0% base chance
 const BASE_4STAR_RATE  := 0.051   # 5.1% base chance
 const SOFT_PITY_START  := 40      # Soft pity scaling begins
 const HARD_PITY        := 60      # Guaranteed 5★ at this pull count
-const GUARANTEED_4STAR := 10      # Guaranteed 4★ every 10 pulls
+const GUARANTEED_4STAR := 10      # Pity counter: 4★+ on 10th pull of streak (5★ satisfies; 5★ resets counter)
 
 # ── Pity State ────────────────────────────────────────────────────────────────
 var pity_5star          : int  = 0
