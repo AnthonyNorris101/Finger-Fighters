@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GearData" format=3 uid="uid://uu2tkxe3t0k3"]
+
+[ext_resource type="Script" uid="uid://daxobe0elot06" path="res://src/main/scripts/data/GearData.gd" id="1_movfb"]
+
+[resource]
+script = ExtResource("1_movfb")
+gear_id = "gear_iron_ring_01"
+gear_name = "Iron Ring"
+description = "Test gear for A3"
+bonus_hp = 10
+bonus_atk = 5
+bonus_def = 2
+metadata/_custom_type_script = "uid://daxobe0elot06"

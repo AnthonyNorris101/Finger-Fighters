@@ -16,7 +16,7 @@ enum RewardType {
 @export var was_duplicate: bool = false
 
 @export var unit: UnitData
-@export var gear: Resource  # Typed as GearData once A3 lands.
+@export var gear: GearData
 
 # Shard / evo material info (MaterialReward stub in A4).
 @export var material_id: String = ""
@@ -45,9 +45,7 @@ func get_display_name() -> String:
 		RewardType.UNIT:
 			return unit.unit_name if unit and unit.unit_name != "" else "???"
 		RewardType.GEAR:
-			if gear != null and gear.get("gear_name"):
-				return str(gear.get("gear_name"))
-			return "???"
+			return gear.get_display_name() if gear else "???"
 		RewardType.MATERIAL:
 			if shard_amount > 0 and source_unit_id != "":
 				return "%d shards (%s)" % [shard_amount, source_unit_id]
