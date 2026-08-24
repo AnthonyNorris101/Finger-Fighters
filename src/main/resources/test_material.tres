@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialReward" format=3 uid="uid://va15qaay07x5"]
+
+[ext_resource type="Script" uid="uid://bw0tgbpf76yep" path="res://src/main/scripts/data/MaterialReward.gd" id="1_ylyim"]
+
+[resource]
+script = ExtResource("1_ylyim")
+material_id = "shard_unit_fire_01"
+material_name = "Fire Unit Shards"
+amount = 20
+source_unit_id = "unit_fire_01"
+rarity = 4
