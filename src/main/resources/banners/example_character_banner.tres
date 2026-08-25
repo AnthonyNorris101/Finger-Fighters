@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BannerData" format=3]
+
+[ext_resource type="Script" uid="uid://00tfaer56dpw" path="res://src/main/scripts/data/BannerData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+banner_id = "example_character"
+banner_name = "Example Character Banner"
+banner_type = 0
+featured_5star = "res://src/main/resources/units/unit_fire_featured.tres"
+standard_5star_pool = Array[String](["res://src/main/resources/units/unit_water_05.tres"])
+unit_4star_pool = Array[String](["res://src/main/resources/units/unit_earth_04.tres"])
+unit_3star_pool = Array[String](["res://src/main/resources/units/unit_fire_03.tres"])
+gear_4star_pool = Array[String](["res://src/main/resources/gear/gear_ring_04.tres"])
+gear_3star_pool = Array[String](["res://src/main/resources/gear/gear_ring_03.tres"])
+unit_4star_rate = 0.5

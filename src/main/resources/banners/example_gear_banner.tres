@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BannerData" format=3]
+
+[ext_resource type="Script" uid="uid://00tfaer56dpw" path="res://src/main/scripts/data/BannerData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+banner_id = "example_gear"
+banner_name = "Example Gear Banner"
+banner_type = 1
+gear_5star_pool = Array[String](["res://src/main/resources/gear/gear_crown_05.tres"])
+gear_4star_pool = Array[String](["res://src/main/resources/gear/gear_ring_04.tres"])
+gear_3star_pool = Array[String](["res://src/main/resources/gear/gear_ring_03.tres"])
