@@ -189,7 +189,22 @@ func _resolve_4star() -> Dictionary:
 		push_error("[GachaSystem] 4star pool is empty! Check banner data.")
 		return _make_fallback_result(4)
 	var path : String = pool[randi() % pool.size()]
+	path = _resolve_starter_slot_if_needed(path)
 	return _load_unit_result(4, path, false)
+
+
+## If the 4★ pick is the starter slot placeholder, roll uniformly among starter_pool (~16.67% each).
+func _resolve_starter_slot_if_needed(path: String) -> String:
+	var starter_slot: String = current_banner.get("starter_slot_path", "")
+	if starter_slot.is_empty() or path != starter_slot:
+		return path
+
+	var starter_pool: Array = current_banner.get("starter_pool", [])
+	if starter_pool.is_empty():
+		push_error("[GachaSystem] starter_slot_path rolled but starter_pool is empty.")
+		return path
+
+	return starter_pool[randi() % starter_pool.size()]
 
 
 func _resolve_3star() -> Dictionary:

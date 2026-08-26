@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" uid="uid://ct1pg5piqn6nx" path="res://src/main/scripts/Combat/UnitData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+unit_name = "Starter Slot"
+unit_id = "unit_04_starter_slot"
+lore = "Banner placeholder only — GachaSystem replaces this with a random starter (1/6). Players should never keep this unit."
+element = 0
+is_friend = true
+base_hp = 1
+base_atk = 1
+base_def = 1
+base_elem_res = 0
+base_spd = 1
+base_crit_dmg = 1.0
+current_level = 1
+current_xp = 0.0
+star_level = 4
+max_level = 1
+skill_bar_max = 100

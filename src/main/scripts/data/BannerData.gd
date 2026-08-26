@@ -22,7 +22,12 @@ const BANNER_TYPE_GEAR := "gear"
 @export var unit_4star_pool: Array[String] = []
 @export var unit_3star_pool: Array[String] = []
 
-# Gear pools — paths to GearData .tres files (GearData stub arrives in A3).
+## Path of the 4★ pool placeholder that expands into starter_pool (equal weight).
+@export var starter_slot_path: String = ""
+## The 6 starters. When starter_slot_path is rolled from unit_4star_pool, pick one at random (~16.67% each).
+@export var starter_pool: Array[String] = []
+
+# Gear pools — paths to GearData .tres files.
 @export var gear_5star_pool: Array[String] = []
 @export var gear_4star_pool: Array[String] = []
 @export var gear_3star_pool: Array[String] = []
@@ -61,6 +66,8 @@ func to_gacha_dictionary() -> Dictionary:
 		"3star_pool": unit_3star_pool.duplicate(),
 		"unit_4star_pool": unit_4star_pool.duplicate(),
 		"unit_3star_pool": unit_3star_pool.duplicate(),
+		"starter_slot_path": starter_slot_path,
+		"starter_pool": starter_pool.duplicate(),
 		"gear_5star_pool": gear_5star_pool.duplicate(),
 		"gear_4star_pool": gear_4star_pool.duplicate(),
 		"gear_3star_pool": gear_3star_pool.duplicate(),
@@ -102,6 +109,13 @@ func _validate_character_banner(errors: Array[String]) -> void:
 
 	if not gear_5star_pool.is_empty():
 		errors.append("character banner must not include 5★ gear (gear_5star_pool must be empty).")
+
+	if not starter_slot_path.strip_edges().is_empty() and starter_pool.is_empty():
+		errors.append("starter_slot_path is set but starter_pool is empty.")
+	if starter_slot_path.strip_edges().is_empty() and not starter_pool.is_empty():
+		errors.append("starter_pool is set but starter_slot_path is empty.")
+	if not starter_slot_path.strip_edges().is_empty() and starter_slot_path not in unit_4star_pool:
+		errors.append("starter_slot_path must also appear in unit_4star_pool.")
 
 	var has_unit_pool := not unit_3star_pool.is_empty() or not unit_4star_pool.is_empty()
 	var has_gear_pool := not gear_3star_pool.is_empty() or not gear_4star_pool.is_empty()
