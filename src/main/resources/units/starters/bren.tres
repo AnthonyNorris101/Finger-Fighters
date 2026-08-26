@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" uid="uid://ct1pg5piqn6nx" path="res://src/main/scripts/Combat/UnitData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+unit_name = "Bren"
+unit_id = "0004"
+lore = "Bren has never once taken a step back in his life. Not when the ground shook. Not when the sky fell. His teammates learned early: if Bren is still standing, the fight isn't over.
+
+Kit (wire as Resources later): Skill Earthshatter · Passive Granite Hide · Leader Unbroken Ground. Role: Tank."
+element = 2
+is_friend = true
+base_hp = 1200
+base_atk = 160
+base_def = 280
+base_elem_res = 200
+base_spd = 80
+base_crit_dmg = 1.2
+current_level = 1
+current_xp = 0.0
+star_level = 1
+max_level = 20
+skill_bar_max = 100
