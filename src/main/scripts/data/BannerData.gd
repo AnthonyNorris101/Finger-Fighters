@@ -32,9 +32,6 @@ const BANNER_TYPE_GEAR := "gear"
 @export var gear_4star_pool: Array[String] = []
 @export var gear_3star_pool: Array[String] = []
 
-## On character banners, chance a 4★ pull is a unit vs 4★ gear (0.0–1.0).
-@export_range(0.0, 1.0) var unit_4star_rate: float = 0.5
-
 # Optional rate/pity overrides — mirror GachaSystem defaults until wired in Phase B.
 @export var base_5star_rate: float = 0.020
 @export var base_4star_rate: float = 0.051
@@ -71,7 +68,6 @@ func to_gacha_dictionary() -> Dictionary:
 		"gear_5star_pool": gear_5star_pool.duplicate(),
 		"gear_4star_pool": gear_4star_pool.duplicate(),
 		"gear_3star_pool": gear_3star_pool.duplicate(),
-		"unit_4star_rate": unit_4star_rate,
 		"base_5star_rate": base_5star_rate,
 		"base_4star_rate": base_4star_rate,
 		"soft_pity_start": soft_pity_start,
