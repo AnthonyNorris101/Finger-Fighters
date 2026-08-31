@@ -123,10 +123,10 @@ func _resolve_pull() -> Dictionary:
 			pity_5star = 0
 			pity_4star = 0   # 5star resets both counters
 		4:
-			result     = _resolve_4star()
+			result     = _resolve_from_pool(4)
 			pity_4star = 0
 		_:
-			result     = _resolve_3star()
+			result     = _resolve_from_pool(3)
 
 	result["pity_count"] = pity_5star
 	_log_pull(result)
@@ -163,37 +163,83 @@ func _get_5star_rate() -> float:
 	return lerp(BASE_5STAR_RATE, 1.0, pulls_in_soft / range_size)
 
 
-func _resolve_5star() -> Dictionary:
-	var featured_path  : String = current_banner.get("featured_5star", "")
-	var standard_paths : Array  = current_banner.get("standard_5star_pool", [])
+# ── Category resolution ───────────────────────────────────────────────────────
 
-	# Guaranteed featured — skip the 50/50 flip
+## Raw dictionaries without the key are treated as character banners.
+func _banner_type() -> String:
+	return current_banner.get("banner_type", BannerData.BANNER_TYPE_CHARACTER)
+
+
+func _is_gear_banner() -> bool:
+	return _banner_type() == BannerData.BANNER_TYPE_GEAR
+
+
+## Pool this banner draws from at a given rarity.
+## 5star units live in standard_5star_pool because featured_5star is separate;
+## everything else follows the unit_Nstar_pool / gear_Nstar_pool naming.
+func _pick_pool(rarity: int) -> Array:
+	if _is_gear_banner():
+		return current_banner.get("gear_%dstar_pool" % rarity, [])
+	if rarity == 5:
+		return current_banner.get("standard_5star_pool", [])
+	return current_banner.get("unit_%dstar_pool" % rarity, [])
+
+
+## 3star and 4star buckets — no featured logic at these rarities.
+func _resolve_from_pool(rarity: int) -> Dictionary:
+	var pool := _pick_pool(rarity)
+	if pool.is_empty():
+		push_error("[GachaSystem] %dstar pool is empty on %s banner! Check banner data." \
+			% [rarity, _banner_type()])
+		return _make_fallback_result(rarity)
+
+	var path : String = pool[randi() % pool.size()]
+
+	if _is_gear_banner():
+		return _build_gear_result(rarity, path)
+
+	path = _resolve_starter_slot_if_needed(path)
+	return _build_unit_result(rarity, path, false)
+
+
+## Featured 50/50 + guarantee. Identical on both banner types — only the pool
+## the 50/50 loses into differs (standard_5star_pool vs gear_5star_pool).
+func _resolve_5star() -> Dictionary:
+	var featured_path : String = current_banner.get("featured_5star", "")
+	var standard_paths := _pick_pool(5)
+
+	# Misconfigured banner. Roll from the pool rather than loading "" and
+	# showing the player a ???.
+	if featured_path.strip_edges().is_empty():
+		push_warning("[GachaSystem] %s banner has no featured_5star — rolling from pool." \
+			% _banner_type())
+		return _resolve_from_pool(5)
+
+	# Guaranteed featured, or nothing to lose the 50/50 into
 	if guaranteed_featured or standard_paths.is_empty():
 		guaranteed_featured = false
-		return _load_unit_result(5, featured_path, true)
+		return _build_featured_result(featured_path)
 
 	# 50/50 flip
 	if randf() < 0.5:
 		guaranteed_featured = false
-		return _load_unit_result(5, featured_path, true)
-	else:
-		# Lost 50/50 — give standard unit, save guarantee for next time
-		guaranteed_featured = true
-		var path : String = standard_paths[randi() % standard_paths.size()]
-		return _load_unit_result(5, path, false)
+		return _build_featured_result(featured_path)
+
+	# Lost 50/50 — standard reward, save the guarantee for next time
+	guaranteed_featured = true
+	var path : String = standard_paths[randi() % standard_paths.size()]
+	if _is_gear_banner():
+		return _build_gear_result(5, path)
+	return _build_unit_result(5, path, false)
 
 
-func _resolve_4star() -> Dictionary:
-	var pool : Array = current_banner.get("4star_pool", [])
-	if pool.is_empty():
-		push_error("[GachaSystem] 4star pool is empty! Check banner data.")
-		return _make_fallback_result(4)
-	var path : String = pool[randi() % pool.size()]
-	path = _resolve_starter_slot_if_needed(path)
-	return _load_unit_result(4, path, false)
+func _build_featured_result(path: String) -> Dictionary:
+	if _is_gear_banner():
+		return _build_gear_result(5, path, true)
+	return _build_unit_result(5, path, true)
 
 
-## If the 4★ pick is the starter slot placeholder, roll uniformly among starter_pool (~16.67% each).
+## If the pick is the starter slot placeholder, roll uniformly among starter_pool (~16.67% each).
 func _resolve_starter_slot_if_needed(path: String) -> String:
 	var starter_slot: String = current_banner.get("starter_slot_path", "")
 	if starter_slot.is_empty() or path != starter_slot:
@@ -207,38 +253,71 @@ func _resolve_starter_slot_if_needed(path: String) -> String:
 	return starter_pool[randi() % starter_pool.size()]
 
 
-func _resolve_3star() -> Dictionary:
-	var pool : Array = current_banner.get("3star_pool", [])
-	if pool.is_empty():
-		push_error("[GachaSystem] 3star pool is empty! Check banner data.")
-		return _make_fallback_result(3)
-	var path : String = pool[randi() % pool.size()]
-	return _load_unit_result(3, path, false)
+## True when the resolved path is one of the six starters (checked post-lottery).
+func _is_starter_path(path: String) -> bool:
+	var starter_pool : Array = current_banner.get("starter_pool", [])
+	return path in starter_pool
 
 
-## Loads a UnitData .tres file, duplicates it so each instance is independent,
-## and wraps it in a result Dictionary.
-## duplicate(true) is critical — without it all players share the same Resource
-## object and modifying one unit's level would modify ALL of them.
-func _load_unit_result(rarity: int, path: String, is_featured: bool) -> Dictionary:
-	if path == "" or not ResourceLoader.exists(path):
+# ── Result builders ───────────────────────────────────────────────────────────
+
+## duplicate(true) is critical — without it every pull shares one Resource
+## object and levelling one unit would level all of them.
+func _build_unit_result(rarity: int, path: String, is_featured: bool) -> Dictionary:
+	if path.strip_edges().is_empty() or not ResourceLoader.exists(path):
 		push_error("[GachaSystem] Unit resource not found: %s" % path)
 		return _make_fallback_result(rarity)
 
 	var unit : UnitData = load(path).duplicate(true)
-	unit.star_level = rarity
+	var is_starter := _is_starter_path(path)
+
+	# Starters always grant as their 1star base form — the pull's rarity bucket
+	# is not their star level. Evolution is progression, not a banner product.
+	unit.star_level = 1 if is_starter else rarity
 
 	return {
 		"unit":        unit,
 		"rarity":      rarity,
 		"is_featured": is_featured,
-		"pity_count":  pity_5star
+		"is_starter":  is_starter,
+		"pity_count":  pity_5star,
+	}
+
+
+func _build_gear_result(rarity: int, path: String, is_featured: bool = false) -> Dictionary:
+	if path.strip_edges().is_empty() or not ResourceLoader.exists(path):
+		push_error("[GachaSystem] Gear resource not found: %s" % path)
+		return _make_fallback_result(rarity)
+
+	# GearData.rarity comes from the .tres — do NOT overwrite it with the pull
+	# bucket the way units get star_level assigned.
+	var gear : GearData = load(path).duplicate(true)
+
+	return {
+		"gear":        gear,
+		"rarity":      rarity,
+		"is_featured": is_featured,
+		"is_starter":  false,
+		"pity_count":  pity_5star,
 	}
 
 
 ## Placeholder result when a resource path is broken.
 ## Should only appear during dev if banner data is misconfigured.
 func _make_fallback_result(rarity: int) -> Dictionary:
+	if _is_gear_banner():
+		var fallback_gear := GearData.new()
+		fallback_gear.gear_id   = "fallback_%d" % rarity
+		fallback_gear.gear_name = "???"
+		fallback_gear.rarity    = rarity
+		return {
+			"gear":        fallback_gear,
+			"rarity":      rarity,
+			"is_featured": false,
+			"is_starter":  false,
+			"pity_count":  pity_5star,
+		}
+
 	var fallback       := UnitData.new()
 	fallback.unit_name  = "???"
 	fallback.unit_id    = "fallback_%d" % rarity
@@ -247,12 +326,23 @@ func _make_fallback_result(rarity: int) -> Dictionary:
 		"unit":        fallback,
 		"rarity":      rarity,
 		"is_featured": false,
-		"pity_count":  pity_5star
+		"is_starter":  false,
+		"pity_count":  pity_5star,
 	}
 
 
 func _log_pull(result: Dictionary) -> void:
-	var unit     : UnitData = result["unit"]
-	var stars    := "★".repeat(result["rarity"])
-	var featured := " [FEATURED]" if result["is_featured"] else ""
-	print("[GachaSystem] %s %s%s" % [stars, unit.unit_name, featured])
+	var stars := "★".repeat(result["rarity"])
+	var label := "???"
+	if result.get("unit") != null:
+		label = result["unit"].unit_name
+	elif result.get("gear") != null:
+		label = result["gear"].get_display_name()
+
+	var tags := ""
+	if result.get("is_featured", false):
+		tags += " [FEATURED]"
+	if result.get("is_starter", false):
+		tags += " [STARTER]"
+
+	print("[GachaSystem] %s %s%s" % [stars, label, tags])
