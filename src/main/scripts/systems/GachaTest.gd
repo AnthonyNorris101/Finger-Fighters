@@ -29,6 +29,35 @@ func _ready() -> void:
 	print("Guaranteed featured: ", gacha.has_guaranteed_featured())
 
 	_run_step_tests(banner_data, results)
+	_test_b3_empty_featured_guard(gacha, banner_data)
+
+
+func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
+	print("\n=== B3 TEST: empty featured_5star guard ===")
+
+	var misconfigured: Dictionary = banner_data.to_gacha_dictionary()
+	misconfigured["featured_5star"] = ""
+	gacha.load_banner(misconfigured)
+
+	var failures := 0
+	const TRIALS := 30
+	for _trial in TRIALS:
+		gacha.pity_5star = gacha.HARD_PITY - 1
+		gacha.pity_4star = 0
+		gacha.guaranteed_featured = false
+
+		var result: Dictionary = gacha.pull_single()
+		var unit: UnitData = result.get("unit")
+		if unit == null or unit.unit_name == "???":
+			failures += 1
+
+	if failures == 0:
+		print("[PASS] B3: %d forced 5★ pulls with no featured — no ??? fallbacks" % TRIALS)
+	else:
+		push_error("[FAIL] B3: %d / %d pulls returned ??? (empty-featured bug)" % [failures, TRIALS])
+
+	# Restore the real banner for anything else that runs after this scene loads.
+	gacha.load_banner(banner_data.to_gacha_dictionary())
 
 
 func _run_step_tests(banner_data: BannerData, results: Array) -> void:
