@@ -16,10 +16,15 @@ const SOFT_PITY_START  := 40      # Soft pity scaling begins
 const HARD_PITY        := 60      # Guaranteed 5★ at this pull count
 const GUARANTEED_4STAR := 10      # Pity counter: 4★+ on 10th pull of streak (5★ satisfies; 5★ resets counter)
 
-# ── Pity State ────────────────────────────────────────────────────────────────
-var pity_5star          : int  = 0
-var pity_4star          : int  = 0
-var guaranteed_featured : bool = false
+# ── Pity State (independent track per banner_type) ───────────────────────────
+var _pity: Dictionary = {
+	BannerData.BANNER_TYPE_CHARACTER: {
+		"pity_5star": 0, "pity_4star": 0, "guaranteed_featured": false,
+	},
+	BannerData.BANNER_TYPE_GEAR: {
+		"pity_5star": 0, "pity_4star": 0, "guaranteed_featured": false,
+	},
+}
 
 # ── Active Banner ─────────────────────────────────────────────────────────────
 # Banner format:
@@ -71,39 +76,57 @@ func pull_ten() -> Array:
 	return results
 
 
-## Current pull count toward next 5star.
+## Current pull count toward next 5star on the active banner's pity track.
 func get_5star_pity() -> int:
-	return pity_5star
+	return _active_pity().pity_5star
 
 
-## Current pull count toward next guaranteed 4star.
+## Current pull count toward next guaranteed 4star on the active banner's pity track.
 func get_4star_pity() -> int:
-	return pity_4star
+	return _active_pity().pity_4star
 
 
-## Whether the player is guaranteed the featured unit on next 5star.
+## Whether the player is guaranteed the featured item on next 5star (active track).
 func has_guaranteed_featured() -> bool:
-	return guaranteed_featured
+	return _active_pity().guaranteed_featured
+
+
+## Dev/test helper — sets pity on the currently loaded banner's track.
+func debug_set_pity(pity_5star: int, pity_4star: int, guaranteed_featured: bool = false) -> void:
+	var track := _active_pity()
+	track.pity_5star = pity_5star
+	track.pity_4star = pity_4star
+	track.guaranteed_featured = guaranteed_featured
 
 
 ## Serialize pity state for saving. Pass result to your SaveManager.
 func save_pity_state() -> Dictionary:
 	return {
-		"pity_5star":          pity_5star,
-		"pity_4star":          pity_4star,
-		"guaranteed_featured": guaranteed_featured,
-		"banner_name":         current_banner.get("name", "")
+		"pity_by_banner_type": {
+			BannerData.BANNER_TYPE_CHARACTER: _pity[BannerData.BANNER_TYPE_CHARACTER].duplicate(),
+			BannerData.BANNER_TYPE_GEAR: _pity[BannerData.BANNER_TYPE_GEAR].duplicate(),
+		},
+		"banner_name": current_banner.get("name", ""),
 	}
 
 
 ## Restore pity state from a save Dictionary.
 ## Call this on game load BEFORE calling load_banner().
+## Accepts the new per-type format or legacy flat character-track saves.
 func load_pity_state(state: Dictionary) -> void:
-	pity_5star          = state.get("pity_5star", 0)
-	pity_4star          = state.get("pity_4star", 0)
-	guaranteed_featured = state.get("guaranteed_featured", false)
-	print("[GachaSystem] Pity restored — 5star pity: %d | guaranteed: %s" \
-		% [pity_5star, str(guaranteed_featured)])
+	if state.has("pity_by_banner_type"):
+		var saved: Dictionary = state.pity_by_banner_type
+		for banner_type in saved:
+			_pity[banner_type] = _normalize_pity_track(saved[banner_type])
+	elif state.is_empty():
+		_pity[BannerData.BANNER_TYPE_CHARACTER] = _new_pity_track()
+		_pity[BannerData.BANNER_TYPE_GEAR] = _new_pity_track()
+	else:
+		_pity[BannerData.BANNER_TYPE_CHARACTER] = _normalize_pity_track(state)
+
+	var active := _active_pity()
+	print("[GachaSystem] Pity restored — %s track: 5★=%d 4★=%d guaranteed=%s" \
+		% [_banner_type(), active.pity_5star, active.pity_4star, str(active.guaranteed_featured)])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -111,35 +134,37 @@ func load_pity_state(state: Dictionary) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _resolve_pull() -> Dictionary:
-	pity_5star += 1
-	pity_4star += 1
+	var track := _active_pity()
+	track.pity_5star += 1
+	track.pity_4star += 1
 
 	var rarity := _determine_rarity()
 	var result : Dictionary
 
 	match rarity:
 		5:
-			result     = _resolve_5star()
-			pity_5star = 0
-			pity_4star = 0   # 5star resets both counters
+			result          = _resolve_5star()
+			track.pity_5star = 0
+			track.pity_4star = 0   # 5star resets both counters
 		4:
-			result     = _resolve_from_pool(4)
-			pity_4star = 0
+			result          = _resolve_from_pool(4)
+			track.pity_4star = 0
 		_:
-			result     = _resolve_from_pool(3)
+			result = _resolve_from_pool(3)
 
-	result["pity_count"] = pity_5star
+	result["pity_count"] = track.pity_5star
 	_log_pull(result)
 	return result
 
 
 func _determine_rarity() -> int:
+	var track := _active_pity()
 	# Hard pity — always 5star
-	if pity_5star >= HARD_PITY:
+	if track.pity_5star >= HARD_PITY:
 		return 5
 
 	# Guaranteed 4star window — still possible to spike into 5star
-	if pity_4star >= GUARANTEED_4STAR:
+	if track.pity_4star >= GUARANTEED_4STAR:
 		if randf() < _get_5star_rate():
 			return 5
 		return 4
@@ -156,11 +181,36 @@ func _determine_rarity() -> int:
 ## 5star rate with soft pity scaling.
 ## Scales linearly from BASE_5STAR_RATE to 100% between pulls 40 and 60.
 func _get_5star_rate() -> float:
-	if pity_5star < SOFT_PITY_START:
+	var track := _active_pity()
+	if track.pity_5star < SOFT_PITY_START:
 		return BASE_5STAR_RATE
 	var range_size    := float(HARD_PITY - SOFT_PITY_START)
-	var pulls_in_soft := float(pity_5star - SOFT_PITY_START)
+	var pulls_in_soft := float(track.pity_5star - SOFT_PITY_START)
 	return lerp(BASE_5STAR_RATE, 1.0, pulls_in_soft / range_size)
+
+
+func _new_pity_track() -> Dictionary:
+	return {"pity_5star": 0, "pity_4star": 0, "guaranteed_featured": false}
+
+
+func _normalize_pity_track(data) -> Dictionary:
+	if data is Dictionary:
+		return {
+			"pity_5star": data.get("pity_5star", 0),
+			"pity_4star": data.get("pity_4star", 0),
+			"guaranteed_featured": data.get("guaranteed_featured", false),
+		}
+	return _new_pity_track()
+
+
+func _ensure_pity_track(banner_type: String) -> Dictionary:
+	if not _pity.has(banner_type):
+		_pity[banner_type] = _new_pity_track()
+	return _pity[banner_type]
+
+
+func _active_pity() -> Dictionary:
+	return _ensure_pity_track(_banner_type())
 
 
 # ── Category resolution ───────────────────────────────────────────────────────
@@ -216,17 +266,18 @@ func _resolve_5star() -> Dictionary:
 		return _resolve_from_pool(5)
 
 	# Guaranteed featured, or nothing to lose the 50/50 into
-	if guaranteed_featured or standard_paths.is_empty():
-		guaranteed_featured = false
+	var track := _active_pity()
+	if track.guaranteed_featured or standard_paths.is_empty():
+		track.guaranteed_featured = false
 		return _build_featured_result(featured_path)
 
 	# 50/50 flip
 	if randf() < 0.5:
-		guaranteed_featured = false
+		track.guaranteed_featured = false
 		return _build_featured_result(featured_path)
 
 	# Lost 50/50 — standard reward, save the guarantee for next time
-	guaranteed_featured = true
+	track.guaranteed_featured = true
 	var path : String = standard_paths[randi() % standard_paths.size()]
 	if _is_gear_banner():
 		return _build_gear_result(5, path)
@@ -280,7 +331,7 @@ func _build_unit_result(rarity: int, path: String, is_featured: bool) -> Diction
 		"rarity":      rarity,
 		"is_featured": is_featured,
 		"is_starter":  is_starter,
-		"pity_count":  pity_5star,
+		"pity_count":  _active_pity().pity_5star,
 	}
 
 
@@ -298,7 +349,7 @@ func _build_gear_result(rarity: int, path: String, is_featured: bool = false) ->
 		"rarity":      rarity,
 		"is_featured": is_featured,
 		"is_starter":  false,
-		"pity_count":  pity_5star,
+		"pity_count":  _active_pity().pity_5star,
 	}
 
 
@@ -315,7 +366,7 @@ func _make_fallback_result(rarity: int) -> Dictionary:
 			"rarity":      rarity,
 			"is_featured": false,
 			"is_starter":  false,
-			"pity_count":  pity_5star,
+			"pity_count":  _active_pity().pity_5star,
 		}
 
 	var fallback       := UnitData.new()
@@ -327,7 +378,7 @@ func _make_fallback_result(rarity: int) -> Dictionary:
 		"rarity":      rarity,
 		"is_featured": false,
 		"is_starter":  false,
-		"pity_count":  pity_5star,
+		"pity_count":  _active_pity().pity_5star,
 	}
 
 

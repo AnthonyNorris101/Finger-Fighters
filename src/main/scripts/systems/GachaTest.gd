@@ -4,6 +4,7 @@
 extends Node
 
 const CHARACTER_BANNER_PATH := "res://src/main/resources/banners/example_character_banner.tres"
+const GEAR_BANNER_PATH := "res://src/main/resources/banners/example_gear_banner.tres"
 
 
 func _ready() -> void:
@@ -30,6 +31,7 @@ func _ready() -> void:
 
 	_run_step_tests(banner_data, results)
 	_test_b3_empty_featured_guard(gacha, banner_data)
+	_test_b4_independent_pity_tracks(gacha, banner_data)
 
 
 func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
@@ -42,9 +44,7 @@ func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void
 	var failures := 0
 	const TRIALS := 30
 	for _trial in TRIALS:
-		gacha.pity_5star = gacha.HARD_PITY - 1
-		gacha.pity_4star = 0
-		gacha.guaranteed_featured = false
+		gacha.debug_set_pity(gacha.HARD_PITY - 1, 0, false)
 
 		var result: Dictionary = gacha.pull_single()
 		var unit: UnitData = result.get("unit")
@@ -58,6 +58,42 @@ func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void
 
 	# Restore the real banner for anything else that runs after this scene loads.
 	gacha.load_banner(banner_data.to_gacha_dictionary())
+
+
+func _test_b4_independent_pity_tracks(gacha: Node, character_banner: BannerData) -> void:
+	print("\n=== B4 TEST: independent pity tracks ===")
+
+	var gear_banner := load(GEAR_BANNER_PATH) as BannerData
+	if gear_banner == null:
+		push_error("[GachaTest] Failed to load gear banner at %s" % GEAR_BANNER_PATH)
+		return
+
+	gacha.load_pity_state({})
+
+	gacha.load_banner(character_banner.to_gacha_dictionary())
+	gacha.pull_ten()
+	var character_pity: int = gacha.get_5star_pity()
+
+	gacha.load_banner(gear_banner.to_gacha_dictionary())
+	if gacha.get_5star_pity() != 0:
+		push_error("[FAIL] B4: gear track should start at 0 after banner switch")
+		return
+
+	gacha.pull_ten()
+	var gear_pity: int = gacha.get_5star_pity()
+
+	gacha.load_banner(character_banner.to_gacha_dictionary())
+	var character_pity_restored: int = gacha.get_5star_pity()
+
+	if character_pity == 10 and gear_pity == 10 and character_pity_restored == 10:
+		print("[PASS] B4: character pity stayed %d after %d gear pulls" % [character_pity_restored, gear_pity])
+	else:
+		push_error(
+			"[FAIL] B4: expected character=10/10, gear=10 — got character=%d/%d, gear=%d"
+			% [character_pity, character_pity_restored, gear_pity]
+		)
+
+	gacha.load_banner(character_banner.to_gacha_dictionary())
 
 
 func _run_step_tests(banner_data: BannerData, results: Array) -> void:
