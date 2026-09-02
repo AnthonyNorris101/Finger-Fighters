@@ -9,12 +9,19 @@
 
 extends Node
 
-# ── Pull Rate Constants ───────────────────────────────────────────────────────
+# ── Pull Rate Constants (defaults — overridden per banner in load_banner) ─────
 const BASE_5STAR_RATE  := 0.020   # 2.0% base chance
 const BASE_4STAR_RATE  := 0.051   # 5.1% base chance
 const SOFT_PITY_START  := 40      # Soft pity scaling begins
 const HARD_PITY        := 60      # Guaranteed 5★ at this pull count
 const GUARANTEED_4STAR := 10      # Pity counter: 4★+ on 10th pull of streak (5★ satisfies; 5★ resets counter)
+
+# Active rate table — copied from the loaded banner (falls back to const defaults).
+var _base_5star_rate  : float = BASE_5STAR_RATE
+var _base_4star_rate  : float = BASE_4STAR_RATE
+var _soft_pity_start  : int   = SOFT_PITY_START
+var _hard_pity        : int   = HARD_PITY
+var _guaranteed_4star : int   = GUARANTEED_4STAR
 
 # ── Pity State (independent track per banner_type) ───────────────────────────
 var _pity: Dictionary = {
@@ -53,10 +60,18 @@ signal pull_result(result: Dictionary)
 # PUBLIC API
 # ─────────────────────────────────────────────────────────────────────────────
 
-## Load a banner before any pulls happen.
-func load_banner(banner: Dictionary) -> void:
-	current_banner = banner
-	print("[GachaSystem] Banner loaded: ", banner.get("name", "Unnamed"))
+## Load a banner before any pulls happen. Accepts BannerData or Dictionary.
+func load_banner(banner) -> void:
+	if banner is BannerData:
+		current_banner = banner.to_gacha_dictionary()
+	elif banner is Dictionary:
+		current_banner = banner
+	else:
+		push_error("[GachaSystem] load_banner() expects BannerData or Dictionary.")
+		return
+
+	_apply_banner_rates(current_banner)
+	print("[GachaSystem] Banner loaded: ", current_banner.get("name", "Unnamed"))
 
 
 ## Single pull. Returns result Dictionary and emits pull_result signal.
@@ -160,11 +175,11 @@ func _resolve_pull() -> Dictionary:
 func _determine_rarity() -> int:
 	var track := _active_pity()
 	# Hard pity — always 5star
-	if track.pity_5star >= HARD_PITY:
+	if track.pity_5star >= _hard_pity:
 		return 5
 
 	# Guaranteed 4star window — still possible to spike into 5star
-	if track.pity_4star >= GUARANTEED_4STAR:
+	if track.pity_4star >= _guaranteed_4star:
 		if randf() < _get_5star_rate():
 			return 5
 		return 4
@@ -173,20 +188,30 @@ func _determine_rarity() -> int:
 	var roll := randf()
 	if roll < _get_5star_rate():
 		return 5
-	elif roll < _get_5star_rate() + BASE_4STAR_RATE:
+	elif roll < _get_5star_rate() + _base_4star_rate:
 		return 4
 	return 3
 
 
 ## 5star rate with soft pity scaling.
-## Scales linearly from BASE_5STAR_RATE to 100% between pulls 40 and 60.
+## Scales linearly from base rate to 100% between soft pity start and hard pity.
 func _get_5star_rate() -> float:
 	var track := _active_pity()
-	if track.pity_5star < SOFT_PITY_START:
-		return BASE_5STAR_RATE
-	var range_size    := float(HARD_PITY - SOFT_PITY_START)
-	var pulls_in_soft := float(track.pity_5star - SOFT_PITY_START)
-	return lerp(BASE_5STAR_RATE, 1.0, pulls_in_soft / range_size)
+	if track.pity_5star < _soft_pity_start:
+		return _base_5star_rate
+	var range_size    := float(_hard_pity - _soft_pity_start)
+	if range_size <= 0.0:
+		return 1.0
+	var pulls_in_soft := float(track.pity_5star - _soft_pity_start)
+	return lerp(_base_5star_rate, 1.0, pulls_in_soft / range_size)
+
+
+func _apply_banner_rates(banner: Dictionary) -> void:
+	_base_5star_rate  = banner.get("base_5star_rate", BASE_5STAR_RATE)
+	_base_4star_rate  = banner.get("base_4star_rate", BASE_4STAR_RATE)
+	_soft_pity_start  = banner.get("soft_pity_start", SOFT_PITY_START)
+	_hard_pity        = banner.get("hard_pity", HARD_PITY)
+	_guaranteed_4star = banner.get("guaranteed_4star", GUARANTEED_4STAR)
 
 
 func _new_pity_track() -> Dictionary:

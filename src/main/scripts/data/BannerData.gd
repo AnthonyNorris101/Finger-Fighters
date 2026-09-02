@@ -32,7 +32,7 @@ const BANNER_TYPE_GEAR := "gear"
 @export var gear_4star_pool: Array[String] = []
 @export var gear_3star_pool: Array[String] = []
 
-# Optional rate/pity overrides — mirror GachaSystem defaults until wired in Phase B.
+# Optional rate/pity overrides — read by GachaSystem.load_banner().
 @export var base_5star_rate: float = 0.020
 @export var base_4star_rate: float = 0.051
 @export var soft_pity_start: int = 40

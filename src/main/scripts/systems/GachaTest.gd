@@ -18,7 +18,7 @@ func _ready() -> void:
 	if not banner_data.validate_basic():
 		push_warning("[GachaTest] BannerData failed validate_basic() — check pool paths.")
 
-	gacha.load_banner(banner_data.to_gacha_dictionary())
+	gacha.load_banner(banner_data)
 
 	print("\n=== BANNER: %s ===" % banner_data.banner_name)
 	print("=== DOING 10 PULLS ===")
@@ -32,6 +32,7 @@ func _ready() -> void:
 	_run_step_tests(banner_data, results)
 	_test_b3_empty_featured_guard(gacha, banner_data)
 	_test_b4_independent_pity_tracks(gacha, banner_data)
+	_test_b5_load_banner_and_rates(gacha, banner_data)
 
 
 func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
@@ -57,7 +58,7 @@ func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void
 		push_error("[FAIL] B3: %d / %d pulls returned ??? (empty-featured bug)" % [failures, TRIALS])
 
 	# Restore the real banner for anything else that runs after this scene loads.
-	gacha.load_banner(banner_data.to_gacha_dictionary())
+	gacha.load_banner(banner_data)
 
 
 func _test_b4_independent_pity_tracks(gacha: Node, character_banner: BannerData) -> void:
@@ -93,7 +94,31 @@ func _test_b4_independent_pity_tracks(gacha: Node, character_banner: BannerData)
 			% [character_pity, character_pity_restored, gear_pity]
 		)
 
-	gacha.load_banner(character_banner.to_gacha_dictionary())
+	gacha.load_banner(character_banner)
+
+
+func _test_b5_load_banner_and_rates(gacha: Node, character_banner: BannerData) -> void:
+	print("\n=== B5 TEST: load_banner BannerData + rate overrides ===")
+
+	gacha.load_pity_state({})
+	gacha.load_banner(character_banner)
+
+	if gacha.current_banner.get("banner_id", "") != character_banner.banner_id:
+		push_error("[FAIL] B5: BannerData load did not populate current_banner")
+		return
+
+	var dict_banner: Dictionary = character_banner.to_gacha_dictionary()
+	dict_banner.hard_pity = 3
+	gacha.load_banner(dict_banner)
+	gacha.debug_set_pity(2, 0, false)
+
+	var result: Dictionary = gacha.pull_single()
+	if result.get("rarity", 0) == 5:
+		print("[PASS] B5: BannerData + Dictionary load; hard_pity=3 override triggers 5★ at pity 3")
+	else:
+		push_error("[FAIL] B5: expected hard_pity=3 to force 5★, got rarity %d" % result.get("rarity", 0))
+
+	gacha.load_banner(character_banner)
 
 
 func _run_step_tests(banner_data: BannerData, results: Array) -> void:
