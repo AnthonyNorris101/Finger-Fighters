@@ -6,8 +6,25 @@ extends Node
 const CHARACTER_BANNER_PATH := "res://src/main/resources/banners/example_character_banner.tres"
 const GEAR_BANNER_PATH := "res://src/main/resources/banners/example_gear_banner.tres"
 
+const B8_RESOURCE_PATHS: Array[String] = [
+	"res://src/main/resources/units/unit_03_fire.tres",
+	"res://src/main/resources/units/unit_03_earth.tres",
+	"res://src/main/resources/units/unit_03_electric.tres",
+	"res://src/main/resources/units/unit_03_water.tres",
+	"res://src/main/resources/units/unit_03_light.tres",
+	"res://src/main/resources/units/unit_03_dark.tres",
+	"res://src/main/resources/gear/gear_03_ring.tres",
+	"res://src/main/resources/gear/gear_03_bracelet.tres",
+	"res://src/main/resources/gear/gear_04_necklace.tres",
+	"res://src/main/resources/gear/gear_04_belt.tres",
+	"res://src/main/resources/gear/gear_05_crown.tres",
+	"res://src/main/resources/gear/gear_05_scepter.tres",
+]
+
 
 func _ready() -> void:
+	await _wait_for_resources(B8_RESOURCE_PATHS)
+
 	var gacha = get_parent()  # GachaSystem is the parent node
 
 	var banner_data := load(CHARACTER_BANNER_PATH) as BannerData
@@ -35,6 +52,45 @@ func _ready() -> void:
 	_test_b5_load_banner_and_rates(gacha, banner_data)
 	_test_b6_pull_result_and_signal(gacha, banner_data)
 	_test_b7_banner_validation(banner_data)
+	_test_b8_banner_data(gacha)
+
+
+func _wait_for_resources(paths: Array[String], max_frames: int = 15) -> void:
+	var missing: Array[String] = []
+	for _attempt in max_frames:
+		missing.clear()
+		for path in paths:
+			if not ResourceLoader.exists(path):
+				missing.append(path)
+		if missing.is_empty():
+			return
+		await get_tree().process_frame
+
+	push_warning(
+		"[GachaTest] Resources still missing after %d frames (%d paths) — reimport may be in progress."
+		% [max_frames, missing.size()]
+	)
+
+
+func _allowed_gear_names(banner: BannerData) -> Dictionary:
+	var names: Dictionary = {}
+	var pools: Array = [
+		banner.gear_3star_pool,
+		banner.gear_4star_pool,
+		banner.gear_5star_pool,
+	]
+	for pool in pools:
+		for path in pool:
+			var gear: GearData = load(path) as GearData
+			if gear:
+				names[gear.get_display_name()] = true
+
+	if not banner.featured_5star.is_empty():
+		var featured: GearData = load(banner.featured_5star) as GearData
+		if featured:
+			names[featured.get_display_name()] = true
+
+	return names
 
 
 func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
@@ -267,6 +323,64 @@ func _test_b7_banner_validation(character_banner: BannerData) -> void:
 		return
 
 	print("[PASS] B7: character/gear validation rules enforced")
+
+
+func _test_b8_banner_data(gacha: Node) -> void:
+	print("\n=== B8 TEST: banner data pools ===")
+
+	var character_banner := load(CHARACTER_BANNER_PATH) as BannerData
+	var gear_banner := load(GEAR_BANNER_PATH) as BannerData
+	if character_banner == null or gear_banner == null:
+		push_error("[FAIL] B8: failed to load example banners")
+		return
+
+	if character_banner.unit_3star_pool.size() != 6:
+		push_error(
+			"[FAIL] B8: character unit_3star_pool has %d entries (expected 6)"
+			% character_banner.unit_3star_pool.size()
+		)
+		return
+
+	if not gear_banner.validate_basic():
+		push_error("[FAIL] B8: example gear banner should pass validate_basic()")
+		return
+
+	if gear_banner.featured_5star in gear_banner.gear_5star_pool:
+		push_error("[FAIL] B8: featured_5star must not be in gear_5star_pool")
+		return
+
+	if gear_banner.gear_3star_pool.size() < 2 or gear_banner.gear_4star_pool.size() < 2:
+		push_error("[FAIL] B8: gear banner needs 2+ entries in 3★ and 4★ pools")
+		return
+
+	gacha.load_pity_state({})
+	gacha.load_banner(gear_banner)
+
+	var allowed_gear := _allowed_gear_names(gear_banner)
+	if allowed_gear.size() != 6:
+		push_error("[FAIL] B8: expected 6 gear names in pools, got %d" % allowed_gear.size())
+		return
+
+	print("=== B8: gear banner 10-pull ===")
+	var pulls: Array = gacha.pull_ten()
+	var seen_gear: Dictionary = {}
+
+	for i in pulls.size():
+		var pull: PullResult = pulls[i]
+		if pull.reward_type != PullResult.RewardType.GEAR or pull.gear == null:
+			push_error("[FAIL] B8: gear 10-pull slot %d was not GEAR" % (i + 1))
+			return
+
+		var label: String = pull.get_display_name()
+		if not allowed_gear.has(label):
+			push_error("[FAIL] B8: unknown gear '%s' — not in banner pools" % label)
+			return
+
+		seen_gear[label] = true
+
+	print("[B8] Gear 10-pull pulled: %s" % ", ".join(seen_gear.keys()))
+	print("[PASS] B8: 6 element 3★ pool, gear validates, 10-pull all from pool (%d unique)" % seen_gear.size())
+
 
 func _record_assert(counts: Dictionary, ok: bool, pass_msg: String, fail_msg: String) -> void:
 	if ok:
