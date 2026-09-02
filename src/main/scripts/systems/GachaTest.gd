@@ -34,6 +34,7 @@ func _ready() -> void:
 	_test_b4_independent_pity_tracks(gacha, banner_data)
 	_test_b5_load_banner_and_rates(gacha, banner_data)
 	_test_b6_pull_result_and_signal(gacha, banner_data)
+	_test_b7_banner_validation(banner_data)
 
 
 func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
@@ -231,6 +232,41 @@ func _run_step_tests(banner_data: BannerData, results: Array) -> void:
 	if counts.failed > 0:
 		push_error("[GachaTest] Step tests failed — fix before checking off the step.")
 
+
+func _test_b7_banner_validation(character_banner: BannerData) -> void:
+	print("\n=== B7 TEST: BannerData validation ===")
+
+	if not character_banner.validate_basic():
+		push_error("[FAIL] B7: example character banner should pass validate_basic()")
+		return
+
+	# Character banner must reject any gear pool tier.
+	var bad_character := character_banner.duplicate() as BannerData
+	bad_character.gear_3star_pool = ["res://src/main/resources/gear/gear_03_ring.tres"]
+	if bad_character.validate_basic():
+		push_error("[FAIL] B7: character banner with gear_3star_pool should fail validation")
+		return
+
+	# Gear banner must require featured_5star.
+	var bad_gear := BannerData.new()
+	bad_gear.banner_id = "test_gear_invalid"
+	bad_gear.banner_name = "Test Gear Invalid"
+	bad_gear.banner_type = BannerData.BannerType.GEAR
+	bad_gear.gear_3star_pool = ["res://src/main/resources/gear/gear_03_ring.tres"]
+	bad_gear.gear_4star_pool = ["res://src/main/resources/gear/gear_04_necklace.tres"]
+	bad_gear.gear_5star_pool = ["res://src/main/resources/gear/gear_05_crown.tres"]
+	if bad_gear.validate_basic():
+		push_error("[FAIL] B7: gear banner without featured_5star should fail validation")
+		return
+
+	# Featured must not also sit in gear_5star_pool (50/50 chase bug).
+	var bad_featured_dup := bad_gear.duplicate() as BannerData
+	bad_featured_dup.featured_5star = "res://src/main/resources/gear/gear_05_crown.tres"
+	if bad_featured_dup.validate_basic():
+		push_error("[FAIL] B7: gear banner with featured in gear_5star_pool should fail validation")
+		return
+
+	print("[PASS] B7: character/gear validation rules enforced")
 
 func _record_assert(counts: Dictionary, ok: bool, pass_msg: String, fail_msg: String) -> void:
 	if ok:

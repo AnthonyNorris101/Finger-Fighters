@@ -102,9 +102,15 @@ func validate_basic() -> bool:
 func _validate_character_banner(errors: Array[String]) -> void:
 	if featured_5star.strip_edges().is_empty():
 		errors.append("character banner requires featured_5star.")
+	elif not _pool_path_exists(featured_5star):
+		errors.append("character banner featured_5star resource not found: %s" % featured_5star)
 
 	if not gear_5star_pool.is_empty():
-		errors.append("character banner must not include 5★ gear (gear_5star_pool must be empty).")
+		errors.append("character banner must not include gear_5star_pool.")
+	if not gear_4star_pool.is_empty():
+		errors.append("character banner must not include gear_4star_pool.")
+	if not gear_3star_pool.is_empty():
+		errors.append("character banner must not include gear_3star_pool.")
 
 	if not starter_slot_path.strip_edges().is_empty() and starter_pool.is_empty():
 		errors.append("starter_slot_path is set but starter_pool is empty.")
@@ -113,22 +119,40 @@ func _validate_character_banner(errors: Array[String]) -> void:
 	if not starter_slot_path.strip_edges().is_empty() and starter_slot_path not in unit_4star_pool:
 		errors.append("starter_slot_path must also appear in unit_4star_pool.")
 
-	var has_unit_pool := not unit_3star_pool.is_empty() or not unit_4star_pool.is_empty()
-	var has_gear_pool := not gear_3star_pool.is_empty() or not gear_4star_pool.is_empty()
-	if not has_unit_pool and not has_gear_pool:
-		errors.append("character banner needs at least one unit or gear pool entry.")
+	_validate_pool_paths(errors, unit_3star_pool, "character banner unit_3star_pool")
+	_validate_pool_paths(errors, unit_4star_pool, "character banner unit_4star_pool")
+	_validate_pool_paths(errors, standard_5star_pool, "character banner standard_5star_pool")
 
 
 func _validate_gear_banner(errors: Array[String]) -> void:
-	if not featured_5star.strip_edges().is_empty():
-		errors.append("gear banner must not set featured_5star.")
+	if featured_5star.strip_edges().is_empty():
+		errors.append("gear banner requires featured_5star.")
+	elif not _pool_path_exists(featured_5star):
+		errors.append("gear banner featured_5star resource not found: %s" % featured_5star)
+
 	if not standard_5star_pool.is_empty():
 		errors.append("gear banner must not include standard_5star_pool.")
 	if not unit_4star_pool.is_empty() or not unit_3star_pool.is_empty():
 		errors.append("gear banner must not include unit pools.")
+	if not starter_slot_path.strip_edges().is_empty() or not starter_pool.is_empty():
+		errors.append("gear banner must not include starter_slot_path or starter_pool.")
 
-	var has_gear_pool := not gear_3star_pool.is_empty() \
-		or not gear_4star_pool.is_empty() \
-		or not gear_5star_pool.is_empty()
-	if not has_gear_pool:
-		errors.append("gear banner needs at least one gear pool entry.")
+	_validate_pool_paths(errors, gear_3star_pool, "gear banner gear_3star_pool")
+	_validate_pool_paths(errors, gear_4star_pool, "gear banner gear_4star_pool")
+	_validate_pool_paths(errors, gear_5star_pool, "gear banner gear_5star_pool")
+
+	if not gear_5star_pool.is_empty() and featured_5star in gear_5star_pool:
+		errors.append("gear banner: featured_5star must not also appear in gear_5star_pool.")
+
+
+func _pool_path_exists(path: String) -> bool:
+	return not path.strip_edges().is_empty() and ResourceLoader.exists(path)
+
+
+func _validate_pool_paths(errors: Array[String], pool: Array[String], label: String) -> void:
+	if pool.is_empty():
+		errors.append("%s must not be empty." % label)
+		return
+	for path in pool:
+		if not _pool_path_exists(path):
+			errors.append("%s contains missing resource: %s" % [label, path])
