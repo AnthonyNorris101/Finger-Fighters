@@ -45,15 +45,11 @@ var _pity: Dictionary = {
 var current_banner : Dictionary = {}
 
 # ── Signals ───────────────────────────────────────────────────────────────────
-## Emitted after every single pull resolves.
-## result contains the pulled UnitData resource + metadata.
+## Emitted after every single pull resolves (legacy Dictionary bridge).
 signal pull_result(result: Dictionary)
-# result = {
-#   "unit":        UnitData,   <- the actual resource, ready to use
-#   "rarity":      int,        <- 3, 4, or 5
-#   "is_featured": bool,
-#   "pity_count":  int         <- pity counter after this pull
-# }
+
+## Emitted after pull_single (1 result) or pull_ten (10 results) completes.
+signal pull_completed(results: Array)  # Array of PullResult
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -74,21 +70,23 @@ func load_banner(banner) -> void:
 	print("[GachaSystem] Banner loaded: ", current_banner.get("name", "Unnamed"))
 
 
-## Single pull. Returns result Dictionary and emits pull_result signal.
-func pull_single() -> Dictionary:
+## Single pull. Returns PullResult; emits pull_result (legacy dict) and pull_completed.
+func pull_single() -> PullResult:
 	assert(current_banner.size() > 0, "[GachaSystem] No banner loaded — call load_banner() first.")
-	var result := _resolve_pull()
-	pull_result.emit(result)
-	return result
+	var pull := _resolve_pull_result()
+	pull_result.emit(pull.to_legacy_dictionary())
+	pull_completed.emit([pull])
+	return pull
 
 
-## Ten pulls at once. Returns Array of result Dictionaries.
+## Ten pulls at once. Returns Array of PullResult; emits pull_completed once.
 func pull_ten() -> Array:
 	assert(current_banner.size() > 0, "[GachaSystem] No banner loaded — call load_banner() first.")
-	var results : Array = []
+	var pulls : Array = []
 	for i in 10:
-		results.append(_resolve_pull())
-	return results
+		pulls.append(_resolve_pull_result())
+	pull_completed.emit(pulls)
+	return pulls
 
 
 ## Current pull count toward next 5star on the active banner's pity track.
@@ -147,6 +145,11 @@ func load_pity_state(state: Dictionary) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 # INTERNAL LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
+
+func _resolve_pull_result() -> PullResult:
+	var result_dict := _resolve_pull()
+	return PullResult.from_legacy_dictionary(result_dict)
+
 
 func _resolve_pull() -> Dictionary:
 	var track := _active_pity()

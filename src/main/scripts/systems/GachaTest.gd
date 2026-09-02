@@ -33,6 +33,7 @@ func _ready() -> void:
 	_test_b3_empty_featured_guard(gacha, banner_data)
 	_test_b4_independent_pity_tracks(gacha, banner_data)
 	_test_b5_load_banner_and_rates(gacha, banner_data)
+	_test_b6_pull_result_and_signal(gacha, banner_data)
 
 
 func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void:
@@ -47,9 +48,8 @@ func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void
 	for _trial in TRIALS:
 		gacha.debug_set_pity(gacha.HARD_PITY - 1, 0, false)
 
-		var result: Dictionary = gacha.pull_single()
-		var unit: UnitData = result.get("unit")
-		if unit == null or unit.unit_name == "???":
+		var pull: PullResult = gacha.pull_single()
+		if pull.unit == null or pull.get_display_name() == "???":
 			failures += 1
 
 	if failures == 0:
@@ -57,7 +57,6 @@ func _test_b3_empty_featured_guard(gacha: Node, banner_data: BannerData) -> void
 	else:
 		push_error("[FAIL] B3: %d / %d pulls returned ??? (empty-featured bug)" % [failures, TRIALS])
 
-	# Restore the real banner for anything else that runs after this scene loads.
 	gacha.load_banner(banner_data)
 
 
@@ -71,11 +70,11 @@ func _test_b4_independent_pity_tracks(gacha: Node, character_banner: BannerData)
 
 	gacha.load_pity_state({})
 
-	gacha.load_banner(character_banner.to_gacha_dictionary())
+	gacha.load_banner(character_banner)
 	gacha.pull_ten()
 	var character_pity: int = gacha.get_5star_pity()
 
-	gacha.load_banner(gear_banner.to_gacha_dictionary())
+	gacha.load_banner(gear_banner)
 	if gacha.get_5star_pity() != 0:
 		push_error("[FAIL] B4: gear track should start at 0 after banner switch")
 		return
@@ -83,7 +82,7 @@ func _test_b4_independent_pity_tracks(gacha: Node, character_banner: BannerData)
 	gacha.pull_ten()
 	var gear_pity: int = gacha.get_5star_pity()
 
-	gacha.load_banner(character_banner.to_gacha_dictionary())
+	gacha.load_banner(character_banner)
 	var character_pity_restored: int = gacha.get_5star_pity()
 
 	if character_pity == 10 and gear_pity == 10 and character_pity_restored == 10:
@@ -112,11 +111,65 @@ func _test_b5_load_banner_and_rates(gacha: Node, character_banner: BannerData) -
 	gacha.load_banner(dict_banner)
 	gacha.debug_set_pity(2, 0, false)
 
-	var result: Dictionary = gacha.pull_single()
-	if result.get("rarity", 0) == 5:
+	var pull: PullResult = gacha.pull_single()
+	if pull.rarity == 5:
 		print("[PASS] B5: BannerData + Dictionary load; hard_pity=3 override triggers 5★ at pity 3")
 	else:
-		push_error("[FAIL] B5: expected hard_pity=3 to force 5★, got rarity %d" % result.get("rarity", 0))
+		push_error("[FAIL] B5: expected hard_pity=3 to force 5★, got rarity %d" % pull.rarity)
+
+	gacha.load_banner(character_banner)
+
+
+func _test_b6_pull_result_and_signal(gacha: Node, character_banner: BannerData) -> void:
+	print("\n=== B6 TEST: PullResult + pull_completed ===")
+
+	gacha.load_pity_state({})
+	gacha.load_banner(character_banner)
+
+	var signal_holder: Array = []
+	gacha.pull_completed.connect(func(results: Array) -> void:
+		signal_holder.clear()
+		signal_holder.append_array(results)
+	)
+
+	var pulls: Array = gacha.pull_ten()
+	if pulls.size() != 10:
+		push_error("[FAIL] B6: pull_ten returned %d results (expected 10)" % pulls.size())
+		return
+
+	if signal_holder.size() != 10:
+		push_error("[FAIL] B6: pull_completed emitted %d results (expected 10)" % signal_holder.size())
+		return
+
+	for i in pulls.size():
+		var pull: PullResult = pulls[i]
+		if pull.reward_type != PullResult.RewardType.UNIT:
+			push_error("[FAIL] B6: character pull %d is not UNIT" % (i + 1))
+			return
+		if pull.get_display_name() == "???":
+			push_error("[FAIL] B6: character pull %d is ???" % (i + 1))
+			return
+		if pull.get_reward_type_string() == "":
+			push_error("[FAIL] B6: pull %d missing reward type string" % (i + 1))
+			return
+
+	var gear_banner := load(GEAR_BANNER_PATH) as BannerData
+	if gear_banner == null:
+		push_error("[GachaTest] Failed to load gear banner for B6")
+		return
+
+	gacha.load_banner(gear_banner)
+	var gear_pull: PullResult = gacha.pull_single()
+	if gear_pull.reward_type != PullResult.RewardType.GEAR or gear_pull.gear == null:
+		push_error("[FAIL] B6: gear banner pull did not return GEAR PullResult")
+		return
+
+	var legacy: Dictionary = gear_pull.to_legacy_dictionary()
+	if not legacy.has("gear") or legacy["gear"] == null:
+		push_error("[FAIL] B6: to_legacy_dictionary() missing gear")
+		return
+
+	print("[PASS] B6: PullResult on pull_ten/single, pull_completed signal, gear + legacy bridge")
 
 	gacha.load_banner(character_banner)
 
@@ -142,29 +195,28 @@ func _run_step_tests(banner_data: BannerData, results: Array) -> void:
 
 	var pull_failures := 0
 	for i in results.size():
-		var result: Dictionary = results[i]
+		var pull: PullResult = results[i]
 		var pull_num := i + 1
 
-		if result.get("gear") != null:
+		if pull.reward_type == PullResult.RewardType.GEAR:
 			push_error("[GachaTest] Pull %d: gear dropped on character banner" % pull_num)
 			pull_failures += 1
 			continue
 
-		var unit: UnitData = result.get("unit")
-		if unit == null:
-			push_error("[GachaTest] Pull %d: missing unit in result" % pull_num)
+		if pull.unit == null:
+			push_error("[GachaTest] Pull %d: missing unit in PullResult" % pull_num)
 			pull_failures += 1
 			continue
 
-		if unit.unit_name == "???":
+		if pull.get_display_name() == "???":
 			push_error("[GachaTest] Pull %d: ??? fallback unit" % pull_num)
 			pull_failures += 1
 			continue
 
-		if result.get("is_starter", false) and unit.star_level != 1:
+		if pull.is_starter and pull.unit.star_level != 1:
 			push_error(
 				"[GachaTest] Pull %d: starter %s has star_level %d (expected 1)"
-				% [pull_num, unit.unit_name, unit.star_level]
+				% [pull_num, pull.unit.unit_name, pull.unit.star_level]
 			)
 			pull_failures += 1
 

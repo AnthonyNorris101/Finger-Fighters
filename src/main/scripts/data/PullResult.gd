@@ -13,6 +13,7 @@ enum RewardType {
 @export var reward_type: RewardType = RewardType.UNIT
 @export var rarity: int = 3
 @export var is_featured: bool = false
+@export var is_starter: bool = false
 @export var was_duplicate: bool = false
 
 @export var unit: UnitData
@@ -60,6 +61,7 @@ static func from_legacy_dictionary(data: Dictionary) -> PullResult:
 	var result := PullResult.new()
 	result.rarity = data.get("rarity", 3)
 	result.is_featured = data.get("is_featured", false)
+	result.is_starter = data.get("is_starter", false)
 	result.was_duplicate = data.get("was_duplicate", false)
 	result.pity_count = data.get("pity_count", 0)
 
@@ -76,3 +78,24 @@ static func from_legacy_dictionary(data: Dictionary) -> PullResult:
 		result.source_unit_id = data.get("source_unit_id", "")
 
 	return result
+
+
+## Legacy bridge for code still listening to `pull_result` (Dictionary).
+func to_legacy_dictionary() -> Dictionary:
+	var data := {
+		"rarity": rarity,
+		"is_featured": is_featured,
+		"is_starter": is_starter,
+		"was_duplicate": was_duplicate,
+		"pity_count": pity_count,
+	}
+	match reward_type:
+		RewardType.UNIT:
+			data["unit"] = unit
+		RewardType.GEAR:
+			data["gear"] = gear
+		RewardType.MATERIAL:
+			data["material_id"] = material_id
+			data["shard_amount"] = shard_amount
+			data["source_unit_id"] = source_unit_id
+	return data
