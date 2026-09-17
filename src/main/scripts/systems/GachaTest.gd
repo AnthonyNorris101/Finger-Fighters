@@ -8,6 +8,7 @@ extends Node
 func _ready() -> void:
 	_test_c0_player_save_round_trip()
 	_test_c1_pity_dict_shape()
+	_test_c2_hydrate_pity_from_player_save()
 
 
 func _test_c0_player_save_round_trip() -> void:
@@ -105,3 +106,61 @@ func _test_c1_pity_dict_shape() -> void:
 	loaded.debug_print()
 	PlayerSave.delete_save_file()
 	print("[PASS] C1: pity_by_banner_type apply → disk → load → to_gacha_pity_state()")
+
+
+func _test_c2_hydrate_pity_from_player_save() -> void:
+	print("\n=== C2 TEST: hydrate GachaSystem pity from PlayerSave ===")
+
+	var gacha = get_parent()
+	var character_banner := load("res://src/main/resources/banners/example_character_banner.tres") as BannerData
+	var gear_banner := load("res://src/main/resources/banners/example_gear_banner.tres") as BannerData
+	if character_banner == null or gear_banner == null:
+		push_error("[FAIL] C2: could not load example banners")
+		print("[FAIL] C2: banner load")
+		return
+
+	PlayerSave.delete_save_file()
+
+	var save := PlayerSave.load_or_create()
+	save.apply_pity_from_gacha({
+		"pity_by_banner_type": {
+			"character": {"pity_5star": 23, "pity_4star": 6, "guaranteed_featured": true},
+			"gear": {"pity_5star": 11, "pity_4star": 3, "guaranteed_featured": false},
+		},
+	})
+	if not save.save_to_disk():
+		push_error("[FAIL] C2: save_to_disk() failed")
+		print("[FAIL] C2: save_to_disk() failed")
+		return
+
+	# Simulate boot after a prior session wrote pity to disk.
+	gacha.load_player_save()
+	gacha.load_banner(character_banner)
+
+	if gacha.get_5star_pity() != 23 or gacha.get_4star_pity() != 6 or not gacha.has_guaranteed_featured():
+		push_error(
+			"[FAIL] C2: character track expected 23/6/true — got %d/%d/%s"
+			% [gacha.get_5star_pity(), gacha.get_4star_pity(), str(gacha.has_guaranteed_featured())]
+		)
+		print("[FAIL] C2: character hydrate")
+		return
+
+	gacha.load_banner(gear_banner)
+	if gacha.get_5star_pity() != 11 or gacha.get_4star_pity() != 3 or gacha.has_guaranteed_featured():
+		push_error(
+			"[FAIL] C2: gear track expected 11/3/false — got %d/%d/%s"
+			% [gacha.get_5star_pity(), gacha.get_4star_pity(), str(gacha.has_guaranteed_featured())]
+		)
+		print("[FAIL] C2: gear hydrate")
+		return
+
+	# Banner switch must NOT wipe the other track (in-memory per-type pity).
+	gacha.load_banner(character_banner)
+	if gacha.get_5star_pity() != 23 or not gacha.has_guaranteed_featured():
+		push_error("[FAIL] C2: character track lost after gear banner switch")
+		print("[FAIL] C2: character track after switch")
+		return
+
+	print("[C2] Hydrated pity — character 23/6/true, gear 11/3/false")
+	PlayerSave.delete_save_file()
+	print("[PASS] C2: PlayerSave → load_player_save → load_banner hydrates both tracks")

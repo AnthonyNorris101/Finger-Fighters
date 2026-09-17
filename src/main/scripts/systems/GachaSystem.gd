@@ -44,6 +44,9 @@ var _pity: Dictionary = {
 # }
 var current_banner : Dictionary = {}
 
+# ── Player save (pity hydrate on boot; C3 persists after pulls) ───────────────
+var _player_save: PlayerSave
+
 # ── Signals ───────────────────────────────────────────────────────────────────
 ## Emitted after every single pull resolves (legacy Dictionary bridge).
 signal pull_result(result: Dictionary)
@@ -55,6 +58,22 @@ signal pull_completed(results: Array)  # Array of PullResult
 # ─────────────────────────────────────────────────────────────────────────────
 # PUBLIC API
 # ─────────────────────────────────────────────────────────────────────────────
+
+func _ready() -> void:
+	load_player_save()
+
+## Load user://player_save.res (or defaults) and hydrate pity tracks.
+## Call on boot; safe to call again in tests after rewriting the save file.
+func load_player_save() -> void:
+	_player_save = PlayerSave.load_or_create()
+	load_pity_state(_player_save.to_gacha_pity_state())
+
+
+func get_player_save() -> PlayerSave:
+	if _player_save == null:
+		load_player_save()
+	return _player_save
+
 
 ## Load a banner before any pulls happen. Accepts BannerData or Dictionary.
 func load_banner(banner) -> void:
