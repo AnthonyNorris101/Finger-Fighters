@@ -9,6 +9,7 @@ func _ready() -> void:
 	_test_c0_player_save_round_trip()
 	_test_c1_pity_dict_shape()
 	_test_c2_hydrate_pity_from_player_save()
+	_test_c3_persist_pity_after_pull()
 
 
 func _test_c0_player_save_round_trip() -> void:
@@ -164,3 +165,49 @@ func _test_c2_hydrate_pity_from_player_save() -> void:
 	print("[C2] Hydrated pity — character 23/6/true, gear 11/3/false")
 	PlayerSave.delete_save_file()
 	print("[PASS] C2: PlayerSave → load_player_save → load_banner hydrates both tracks")
+
+
+func _test_c3_persist_pity_after_pull() -> void:
+	print("\n=== C3 TEST: persist pity after pull ===")
+
+	var gacha = get_parent()
+	var character_banner := load("res://src/main/resources/banners/example_character_banner.tres") as BannerData
+	if character_banner == null:
+		push_error("[FAIL] C3: could not character banners")
+		print("[FAIL] C3: banner load")
+		return
+
+	PlayerSave.delete_save_file()
+	gacha.load_player_save()
+	gacha.load_banner(character_banner)
+	gacha.debug_set_pity(5, 2, false)
+
+	gacha.pull_ten()
+	var pity_after_pull: int = gacha.get_5star_pity()
+
+	# Simulate restart: reload save from disk and rehydrate.
+	gacha.load_player_save()
+	gacha.load_banner(character_banner)
+
+	if gacha.get_5star_pity() != pity_after_pull:
+		push_error(
+			"[FAIL] C3: expected pity %d after restart, got %d"
+			% [pity_after_pull, gacha.get_5star_pity()]
+		)
+		print("[FAIL] C3: pity did not survive restart")
+		return
+
+	var disk := PlayerSave.load_or_create()
+	var character: Dictionary = disk.pity_by_banner_type.get("character", {})
+	if int(character.get("pity_5star", -1)) != pity_after_pull:
+		push_error(
+			"[FAIL] C3: disk pity_5star=%s expected %d"
+			% [str(character.get("pity_5star", null)), pity_after_pull]
+		)
+		print("[FAIL] C3: disk pity mismatch")
+		return
+		
+	print("[C3] After pull_ten + restart: character 5★ pity=%d" % pity_after_pull)
+	disk.debug_print()
+	PlayerSave.delete_save_file()
+	print("[PASS] C3: pull_ten persists pity; survives load_player_save restart")

@@ -74,6 +74,13 @@ func get_player_save() -> PlayerSave:
 		load_player_save()
 	return _player_save
 
+## Sync in-meomory pity into PlayerSave and write user://player_save.res once.
+## C3: pity only. D/E will extend this same write for currency + collection
+func _persist_pity_to_player_save() -> void:
+	var save := get_player_save()
+	save.apply_pity_from_gacha(save_pity_state())
+	save.save_to_disk()
+
 
 ## Load a banner before any pulls happen. Accepts BannerData or Dictionary.
 func load_banner(banner) -> void:
@@ -93,6 +100,7 @@ func load_banner(banner) -> void:
 func pull_single() -> PullResult:
 	assert(current_banner.size() > 0, "[GachaSystem] No banner loaded — call load_banner() first.")
 	var pull := _resolve_pull_result()
+	_persist_pity_to_player_save()
 	pull_result.emit(pull.to_legacy_dictionary())
 	pull_completed.emit([pull])
 	return pull
@@ -104,6 +112,7 @@ func pull_ten() -> Array:
 	var pulls : Array = []
 	for i in 10:
 		pulls.append(_resolve_pull_result())
+	_persist_pity_to_player_save()
 	pull_completed.emit(pulls)
 	return pulls
 
