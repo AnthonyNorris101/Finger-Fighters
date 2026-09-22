@@ -18,6 +18,7 @@ config/icon="res://src/main/resources/icon.svg"
 [autoload]
 
 ElementSystem="*uid://8gx6bjwgk5om"
+CurrencyManager="*uid://da6mfp40fu836"
 
 [physics]
 

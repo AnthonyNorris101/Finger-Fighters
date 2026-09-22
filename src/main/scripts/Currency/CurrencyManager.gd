@@ -27,6 +27,7 @@ extends Node
 enum Currency {
 	COINS,
 	SUMMON_TICKETS,
+	GEAR_TICKETS,
 }
 
 
@@ -53,6 +54,7 @@ const SAVE_PATH: String = "user://currency_save.tres"
 const CURRENCY_CAP: Dictionary = {
 	Currency.COINS:          999_999_999,
 	Currency.SUMMON_TICKETS: 9_999,
+	Currency.GEAR_TICKETS:   9_999,
 }
 
 
@@ -63,6 +65,7 @@ const CURRENCY_CAP: Dictionary = {
 var _balances: Dictionary = {
 	Currency.COINS:          0,
 	Currency.SUMMON_TICKETS: 0,
+	Currency.GEAR_TICKETS:   0,
 }
 
 
@@ -158,6 +161,7 @@ func save() -> void:
 	var record := CurrencyRecord.new()
 	record.coin_balance   = _balances[Currency.COINS]
 	record.ticket_balance = _balances[Currency.SUMMON_TICKETS]
+	record.gear_ticket_balance = _balances[Currency.GEAR_TICKETS]
 	var err := ResourceSaver.save(record, SAVE_PATH)
 	if err != OK:
 		push_error("CurrencyManager.save() failed — error code %d" % err)
@@ -172,6 +176,7 @@ func load_save() -> void:
 		return
 	_balances[Currency.COINS]          = record.coin_balance
 	_balances[Currency.SUMMON_TICKETS] = record.ticket_balance
+	_balances[Currency.GEAR_TICKETS]    = record.gear_ticket_balance
 
 
 # Wipes all balances and deletes the save file.
@@ -191,4 +196,5 @@ func debug_print() -> void:
 	print("── CurrencyManager ─────────────────────────────────")
 	print("  Coins:          %d" % _balances[Currency.COINS])
 	print("  Summon Tickets: %d" % _balances[Currency.SUMMON_TICKETS])
+	print("  Gear Tickets:   %d" % _balances[Currency.GEAR_TICKETS])
 	print("────────────────────────────────────────────────────")

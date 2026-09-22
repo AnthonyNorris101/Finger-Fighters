@@ -1,15 +1,16 @@
 # GachaTest.gd
 # Temporary test script — delete before shipping!
 # Attach to a new Node in GachaSystem.tscn as a child of the main Node.
-# Phase C: PlayerSave persistence tests.
+# Phase C tests kept below (not auto-run). Phase D will add step tests here.
 extends Node
 
 
 func _ready() -> void:
-	_test_c0_player_save_round_trip()
-	_test_c1_pity_dict_shape()
-	_test_c2_hydrate_pity_from_player_save()
-	_test_c3_persist_pity_after_pull()
+	pass  # Re-enable / add Phase D tests when needed
+	# _test_c0_player_save_round_trip()
+	# _test_c1_pity_dict_shape()
+	# _test_c2_hydrate_pity_from_player_save()
+	# _test_c3_persist_pity_after_pull()
 
 
 func _test_c0_player_save_round_trip() -> void:
