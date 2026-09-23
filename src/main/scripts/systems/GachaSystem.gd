@@ -15,6 +15,8 @@ const BASE_4STAR_RATE  := 0.051   # 5.1% base chance
 const SOFT_PITY_START  := 40      # Soft pity scaling begins
 const HARD_PITY        := 60      # Guaranteed 5★ at this pull count
 const GUARANTEED_4STAR := 10      # Pity counter: 4★+ on 10th pull of streak (5★ satisfies; 5★ resets counter)
+const COST_SINGLE: int = 1        # Cost of a single pull
+const COST_TEN: int = 10          # Cost of ten pulls
 
 # Active rate table — copied from the loaded banner (falls back to const defaults).
 var _base_5star_rate  : float = BASE_5STAR_RATE
@@ -99,6 +101,8 @@ func load_banner(banner) -> void:
 ## Single pull. Returns PullResult; emits pull_result (legacy dict) and pull_completed.
 func pull_single() -> PullResult:
 	assert(current_banner.size() > 0, "[GachaSystem] No banner loaded — call load_banner() first.")
+	if not _try_spend_tickets(COST_SINGLE):
+		return null
 	var pull := _resolve_pull_result()
 	_persist_pity_to_player_save()
 	pull_result.emit(pull.to_legacy_dictionary())
@@ -109,7 +113,9 @@ func pull_single() -> PullResult:
 ## Ten pulls at once. Returns Array of PullResult; emits pull_completed once.
 func pull_ten() -> Array:
 	assert(current_banner.size() > 0, "[GachaSystem] No banner loaded — call load_banner() first.")
-	var pulls : Array = []
+	if not _try_spend_tickets(COST_TEN):
+		return []
+	var pulls: Array = []
 	for i in 10:
 		pulls.append(_resolve_pull_result())
 	_persist_pity_to_player_save()
@@ -278,6 +284,24 @@ func _banner_type() -> String:
 
 func _is_gear_banner() -> bool:
 	return _banner_type() == BannerData.BANNER_TYPE_GEAR
+
+
+func _currency_for_banner() -> CurrencyManager.Currency:
+	if _is_gear_banner():
+		return CurrencyManager.Currency.GEAR_TICKETS
+	return CurrencyManager.Currency.SUMMON_TICKETS
+
+
+func _try_spend_tickets(amount: int) -> bool:
+	var currency:= _currency_for_banner()
+	if not CurrencyManager.spend(currency, amount):
+		push_error(
+			"[GachaSystem] Not enough tickets - need %d (have %d)"
+			% [amount, CurrencyManager.get_balance(currency)]
+		)
+		return false
+	CurrencyManager.save()
+	return true
 
 
 ## Pool this banner draws from at a given rarity.

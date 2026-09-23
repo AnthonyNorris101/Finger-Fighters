@@ -6,6 +6,7 @@ extends Node
 
 
 func _ready() -> void:
+	_test_d3_ticket_spend()
 	pass  # Re-enable / add Phase D tests when needed
 	# _test_c0_player_save_round_trip()
 	# _test_c1_pity_dict_shape()
@@ -212,3 +213,69 @@ func _test_c3_persist_pity_after_pull() -> void:
 	disk.debug_print()
 	PlayerSave.delete_save_file()
 	print("[PASS] C3: pull_ten persists pity; survives load_player_save restart")
+
+
+func _test_d3_ticket_spend() -> void:
+	print("\n=== D3 TEST: ticket spend before pull ===")
+
+	var gacha = get_parent()
+	var character_banner := load("res://src/main/resources/banners/example_character_banner.tres") as BannerData
+	var gear_banner := load("res://src/main/resources/banners/example_gear_banner.tres") as BannerData
+	if character_banner == null or gear_banner == null:
+		push_error("[FAIL] D3: could not load example banners")
+		print("[FAIL] D3: banner load")
+		return
+
+	CurrencyManager.reset_all()
+	CurrencyManager.add(CurrencyManager.Currency.SUMMON_TICKETS, 3)
+	CurrencyManager.add(CurrencyManager.Currency.GEAR_TICKETS, 12)
+	CurrencyManager.save()
+
+	# Character single: drains 1 SUMMON, not GEAR
+	gacha.load_banner(character_banner)
+	var pull = gacha.pull_single()
+	if pull == null:
+		push_error("[FAIL] D3: character pull_single returned null with tickets")
+		print("[FAIL] D3: character affordable pull")
+		return
+	if CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS) != 2:
+		push_error("[FAIL] D3: expected 2 summon tickets after single, got %d"
+			% CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS))
+		print("[FAIL] D3: summon drain")
+		return
+	if CurrencyManager.get_balance(CurrencyManager.Currency.GEAR_TICKETS) != 12:
+		push_error("[FAIL] D3: gear tickets changed on character pull")
+		print("[FAIL] D3: wrong currency on character")
+		return
+
+	# Broke abort: 0 summon → null, balances unchanged
+	CurrencyManager.spend(CurrencyManager.Currency.SUMMON_TICKETS, 2)
+	CurrencyManager.save()
+	var broke = gacha.pull_single()
+	if broke != null:
+		push_error("[FAIL] D3: expected null when broke")
+		print("[FAIL] D3: broke abort")
+		return
+	if CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS) != 0:
+		push_error("[FAIL] D3: broke pull mutated summon balance")
+		print("[FAIL] D3: broke mutate")
+		return
+
+	# Gear ten: drains 10 GEAR, not SUMMON
+	gacha.load_banner(gear_banner)
+	var gear_pulls: Array = gacha.pull_ten()
+	if gear_pulls.size() != 10:
+		push_error("[FAIL] D3: gear pull_ten expected 10 results, got %d" % gear_pulls.size())
+		print("[FAIL] D3: gear pull_ten")
+		return
+	if CurrencyManager.get_balance(CurrencyManager.Currency.GEAR_TICKETS) != 2:
+		push_error("[FAIL] D3: expected 2 gear tickets after ten, got %d"
+			% CurrencyManager.get_balance(CurrencyManager.Currency.GEAR_TICKETS))
+		print("[FAIL] D3: gear drain")
+		return
+	if CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS) != 0:
+		push_error("[FAIL] D3: summon tickets changed on gear pull")
+		print("[FAIL] D3: wrong currency on gear")
+		return
+
+	print("[PASS] D3: character spends SUMMON, gear spends GEAR, broke aborts")
