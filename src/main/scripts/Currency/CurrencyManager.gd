@@ -154,39 +154,42 @@ func spend_batch(currency_costs: Dictionary) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# SAVE / LOAD
+# SAVE / LOAD  (PlayerSave — user://player_save.res)
 # ─────────────────────────────────────────────────────────────
 
+func write_balances_into(save: PlayerSave) -> void:
+	save.coin_balance = _balances[Currency.COINS]
+	save.summon_ticket_balance = _balances[Currency.SUMMON_TICKETS]
+	save.gear_ticket_balance = _balances[Currency.GEAR_TICKETS]
+
+
+func load_from_player_save(save: PlayerSave = null) -> void:
+	if save == null:
+		save = PlayerSave.load_or_create()
+	_balances[Currency.COINS] = int(save.coin_balance)
+	_balances[Currency.SUMMON_TICKETS] = int(save.summon_ticket_balance)
+	_balances[Currency.GEAR_TICKETS] = int(save.gear_ticket_balance)
+
+
 func save() -> void:
-	var record := CurrencyRecord.new()
-	record.coin_balance   = _balances[Currency.COINS]
-	record.ticket_balance = _balances[Currency.SUMMON_TICKETS]
-	record.gear_ticket_balance = _balances[Currency.GEAR_TICKETS]
-	var err := ResourceSaver.save(record, SAVE_PATH)
-	if err != OK:
-		push_error("CurrencyManager.save() failed — error code %d" % err)
+	# Shop / rewards: update currency fields only; keep pity/collection.
+	var save := PlayerSave.load_or_create()
+	write_balances_into(save)
+	save.save_to_disk()
 
 
 func load_save() -> void:
-	if not ResourceLoader.exists(SAVE_PATH):
-		return  # Fresh install — defaults already set in _balances
-	var record = ResourceLoader.load(SAVE_PATH)
-	if not record is CurrencyRecord:
-		push_error("CurrencyManager.load_save(): save file is not a CurrencyRecord")
-		return
-	_balances[Currency.COINS]          = record.coin_balance
-	_balances[Currency.SUMMON_TICKETS] = record.ticket_balance
-	_balances[Currency.GEAR_TICKETS]    = record.gear_ticket_balance
+	load_from_player_save()
+	# One-time cleanup of old wallet file (Anthony wipe OK).
+	var old_path := "user://currency_save.tres"
+	if FileAccess.file_exists(old_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(old_path))
 
 
-# Wipes all balances and deletes the save file.
-# Use for "New Game" or debug reset — not exposed to normal players.
 func reset_all() -> void:
 	for key in _balances:
 		_balances[key] = 0
-	if ResourceLoader.exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-
+	save()
 
 # ─────────────────────────────────────────────────────────────
 # DEBUG

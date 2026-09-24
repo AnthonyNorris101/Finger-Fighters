@@ -6,7 +6,8 @@ extends Node
 
 
 func _ready() -> void:
-	_test_d3_ticket_spend()
+	# _test_d3_ticket_spend()
+	_test_d4_currency_in_player_save()
 	pass  # Re-enable / add Phase D tests when needed
 	# _test_c0_player_save_round_trip()
 	# _test_c1_pity_dict_shape()
@@ -279,3 +280,56 @@ func _test_d3_ticket_spend() -> void:
 		return
 
 	print("[PASS] D3: character spends SUMMON, gear spends GEAR, broke aborts")
+
+
+func _test_d4_currency_in_player_save() -> void:
+	print("\n=== D4 TEST: currency + pity in one PlayerSave write ===")
+
+	var gacha = get_parent()
+	var character_banner := load("res://src/main/resources/banners/example_character_banner.tres") as BannerData
+	if character_banner == null:
+		push_error("[FAIL] D4: could not load character banner")
+		print("[FAIL] D4: banner load")
+		return
+
+	PlayerSave.delete_save_file()
+	CurrencyManager.reset_all()
+	CurrencyManager.add(CurrencyManager.Currency.SUMMON_TICKETS, 5)
+	CurrencyManager.save()
+
+	gacha.load_player_save()
+	gacha.load_banner(character_banner)
+	gacha.debug_set_pity(3, 1, false)
+
+	var pull = gacha.pull_single()
+	if pull == null:
+		push_error("[FAIL] D4: pull_single returned null")
+		print("[FAIL] D4: pull")
+		return
+
+	# Memory wallet drained
+	if CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS) != 4:
+		push_error("[FAIL] D4: expected 4 summon in CurrencyManager, got %d"
+			% CurrencyManager.get_balance(CurrencyManager.Currency.SUMMON_TICKETS))
+		print("[FAIL] D4: memory balance")
+		return
+
+	# Same file holds currency + pity (reload from disk)
+	var disk := PlayerSave.load_or_create()
+	if disk.summon_ticket_balance != 4:
+		push_error("[FAIL] D4: disk summon_ticket_balance=%d expected 4" % disk.summon_ticket_balance)
+		print("[FAIL] D4: disk currency")
+		return
+	var char_pity: Dictionary = disk.pity_by_banner_type.get("character", {})
+	if int(char_pity.get("pity_5star", -1)) != gacha.get_5star_pity():
+		push_error("[FAIL] D4: disk pity mismatch")
+		print("[FAIL] D4: disk pity")
+		return
+
+	# Old wallet file must stay gone
+	if FileAccess.file_exists("user://currency_save.tres"):
+		push_error("[FAIL] D4: currency_save.tres still exists")
+		print("[FAIL] D4: old save file")
+		return
+
+	print("[PASS] D4: spend + pity → one PlayerSave; no currency_save.tres")

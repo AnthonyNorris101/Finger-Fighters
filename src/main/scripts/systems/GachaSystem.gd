@@ -69,6 +69,7 @@ func _ready() -> void:
 func load_player_save() -> void:
 	_player_save = PlayerSave.load_or_create()
 	load_pity_state(_player_save.to_gacha_pity_state())
+	CurrencyManager.load_from_player_save(_player_save)
 
 
 func get_player_save() -> PlayerSave:
@@ -81,6 +82,7 @@ func get_player_save() -> PlayerSave:
 func _persist_pity_to_player_save() -> void:
 	var save := get_player_save()
 	save.apply_pity_from_gacha(save_pity_state())
+	CurrencyManager.write_balances_into(save)
 	save.save_to_disk()
 
 
@@ -300,7 +302,6 @@ func _try_spend_tickets(amount: int) -> bool:
 			% [amount, CurrencyManager.get_balance(currency)]
 		)
 		return false
-	CurrencyManager.save()
 	return true
 
 
