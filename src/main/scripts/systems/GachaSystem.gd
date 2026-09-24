@@ -48,6 +48,7 @@ var current_banner : Dictionary = {}
 
 # ── Player save (pity hydrate on boot; C3 persists after pulls) ───────────────
 var _player_save: PlayerSave
+var _collection: PlayerCollection
 
 # ── Signals ───────────────────────────────────────────────────────────────────
 ## Emitted after every single pull resolves (legacy Dictionary bridge).
@@ -70,6 +71,13 @@ func load_player_save() -> void:
 	_player_save = PlayerSave.load_or_create()
 	load_pity_state(_player_save.to_gacha_pity_state())
 	CurrencyManager.load_from_player_save(_player_save)
+	get_collection().load_from_player_save(_player_save)
+
+
+func get_collection() -> PlayerCollection:
+	if _collection == null:
+		_collection = PlayerCollection.new()
+	return _collection
 
 
 func get_player_save() -> PlayerSave:
@@ -78,11 +86,12 @@ func get_player_save() -> PlayerSave:
 	return _player_save
 
 ## Sync in-meomory pity into PlayerSave and write user://player_save.res once.
-## C3: pity only. D/E will extend this same write for currency + collection
+## Sync pity + currency + collection into PlayerSave; one disk write.
 func _persist_pity_to_player_save() -> void:
 	var save := get_player_save()
 	save.apply_pity_from_gacha(save_pity_state())
 	CurrencyManager.write_balances_into(save)
+	get_collection().write_into(save)
 	save.save_to_disk()
 
 
@@ -106,6 +115,7 @@ func pull_single() -> PullResult:
 	if not _try_spend_tickets(COST_SINGLE):
 		return null
 	var pull := _resolve_pull_result()
+	get_collection().apply_pull_result(pull)
 	_persist_pity_to_player_save()
 	pull_result.emit(pull.to_legacy_dictionary())
 	pull_completed.emit([pull])
@@ -119,7 +129,9 @@ func pull_ten() -> Array:
 		return []
 	var pulls: Array = []
 	for i in 10:
-		pulls.append(_resolve_pull_result())
+		var pull: PullResult = _resolve_pull_result()
+		get_collection().apply_pull_result(pull)
+		pulls.append(pull)
 	_persist_pity_to_player_save()
 	pull_completed.emit(pulls)
 	return pulls

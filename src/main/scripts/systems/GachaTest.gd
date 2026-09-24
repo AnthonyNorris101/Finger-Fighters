@@ -7,6 +7,7 @@ extends Node
 
 func _ready() -> void:
 	_test_e2_duplicate_shards()
+	_test_e3_collection_in_player_save()
 
 
 func _test_e2_duplicate_shards() -> void:
@@ -92,3 +93,59 @@ func _test_e2_duplicate_shards() -> void:
 		return
 
 	print("[PASS] E2: first own + dupe shards (3★=5, starter 4★=20); no roster dupes")
+
+
+func _test_e3_collection_in_player_save() -> void:
+	print("\n=== E3 TEST: collection + shards in PlayerSave ===")
+
+	var gacha = get_parent()
+	PlayerSave.delete_save_file()
+	gacha.load_player_save()
+
+	var collection: PlayerCollection = gacha.get_collection()
+	collection.owned_unit_ids.clear()
+	collection.shards_by_unit_id.clear()
+
+	var unit := UnitData.new()
+	unit.unit_id = "test_earth_03"
+	unit.unit_name = "Test Earth"
+
+	var first := PullResult.new()
+	first.reward_type = PullResult.RewardType.UNIT
+	first.rarity = 3
+	first.unit = unit
+	collection.apply_pull_result(first)
+
+	var dupe := PullResult.new()
+	dupe.reward_type = PullResult.RewardType.UNIT
+	dupe.rarity = 3
+	dupe.unit = unit
+	collection.apply_pull_result(dupe)
+
+	gacha._persist_pity_to_player_save()
+
+	var disk := PlayerSave.load_or_create()
+	if not disk.owned_unit_ids.has("test_earth_03"):
+		push_error("[FAIL] E3: disk missing owned unit")
+		print("[FAIL] E3: disk owned")
+		return
+	if int(disk.shards_by_unit_id.get("test_earth_03", -1)) != 5:
+		push_error("[FAIL] E3: disk shards expected 5, got %s"
+			% str(disk.shards_by_unit_id.get("test_earth_03", null)))
+		print("[FAIL] E3: disk shards")
+		return
+
+	gacha.load_player_save()
+	var reloaded: PlayerCollection = gacha.get_collection()
+	if not reloaded.has_unit("test_earth_03"):
+		push_error("[FAIL] E3: collection missing unit after reload")
+		print("[FAIL] E3: hydrate owned")
+		return
+	if reloaded.get_shards("test_earth_03") != 5:
+		push_error("[FAIL] E3: shards expected 5 after reload, got %d"
+			% reloaded.get_shards("test_earth_03"))
+		print("[FAIL] E3: hydrate shards")
+		return
+
+	PlayerSave.delete_save_file()
+	print("[PASS] E3: collection + shards → one PlayerSave; survives reload")

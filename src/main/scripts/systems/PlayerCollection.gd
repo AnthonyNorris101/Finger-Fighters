@@ -16,6 +16,20 @@ func get_shards(unit_id: String) -> int:
 	return int(shards_by_unit_id.get(unit_id, 0))
 
 
+func write_into(save: PlayerSave) -> void:
+	save.owned_unit_ids = owned_unit_ids.duplicate()
+	save.shards_by_unit_id = shards_by_unit_id.duplicate()
+
+
+func load_from_player_save(save: PlayerSave) -> void:
+	owned_unit_ids.clear()
+	for id in save.owned_unit_ids:
+		owned_unit_ids.append(str(id))
+	shards_by_unit_id.clear()
+	for key in save.shards_by_unit_id:
+		shards_by_unit_id[str(key)] = int(save.shards_by_unit_id[key])
+
+
 const SHARDS_BY_RARITY: Dictionary = {
 	3: 5,
 	4: 20,
@@ -28,7 +42,6 @@ func _shard_amount_for_rarity(rarity: int) -> int:
 
 
 ## First own → roster. Dupe → shards + was_duplicate (starters included).
-## Gear ignored in E2. Persist = E3.
 func apply_pull_result(result: PullResult) -> void:
 	if result == null:
 		push_error("[PlayerCollection] apply_pull_result(): result is null")
