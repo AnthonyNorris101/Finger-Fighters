@@ -16,9 +16,39 @@ func get_shards(unit_id: String) -> int:
 	return int(shards_by_unit_id.get(unit_id, 0))
 
 
-## E2 fills this in. Stub only for E1.
-func apply_pull_result(_result: PullResult) -> void:
-	pass
+const SHARDS_BY_RARITY: Dictionary = {
+	3: 5,
+	4: 20,
+	5: 50,
+}
+
+
+func _shard_amount_for_rarity(rarity: int) -> int:
+	return int(SHARDS_BY_RARITY.get(rarity, 5))
+
+
+## First own → roster. Dupe → shards + was_duplicate (starters included).
+## Gear ignored in E2. Persist = E3.
+func apply_pull_result(result: PullResult) -> void:
+	if result == null:
+		push_error("[PlayerCollection] apply_pull_result(): result is null")
+		return
+	if result.reward_type != PullResult.RewardType.UNIT:
+		return
+	if result.unit == null or result.unit.unit_id == "":
+		push_error("[PlayerCollection] apply_pull_result(): unit missing unit_id")
+		return
+
+	var unit_id: String = result.unit.unit_id
+	if has_unit(unit_id):
+		var amount: int = _shard_amount_for_rarity(result.rarity)
+		shards_by_unit_id[unit_id] = get_shards(unit_id) + amount
+		result.was_duplicate = true
+		result.shard_amount = amount
+		result.source_unit_id = unit_id
+	else:
+		owned_unit_ids.append(unit_id)
+		result.was_duplicate = false
 
 
 func debug_print() -> void:
