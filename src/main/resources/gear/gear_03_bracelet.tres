@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GearData" format=3]
+
+[ext_resource type="Script" uid="uid://daxobe0elot06" path="res://src/main/scripts/data/GearData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+gear_id = "gear_03_bracelet"
+gear_name = "Iron Bracelet"
+rarity = 3
+description = "3-star gear placeholder."
+bonus_hp = 6
+bonus_atk = 4
+bonus_def = 2

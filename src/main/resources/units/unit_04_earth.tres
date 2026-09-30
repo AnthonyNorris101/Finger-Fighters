@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" uid="uid://ct1pg5piqn6nx" path="res://src/main/scripts/Combat/UnitData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+unit_name = "Earth Four"
+unit_id = "unit_04_earth"
+lore = "4-star banner pool placeholder."
+element = 2
+is_friend = true
+base_hp = 90
+base_atk = 22
+base_def = 10
+base_elem_res = 4
+base_spd = 16
+base_crit_dmg = 1.4
+current_level = 1
+current_xp = 0.0
+star_level = 4
+max_level = 50
+skill_bar_max = 100

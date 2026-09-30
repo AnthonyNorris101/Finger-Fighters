@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BannerData" format=3]
+
+[ext_resource type="Script" uid="uid://00tfaer56dpw" path="res://src/main/scripts/data/BannerData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+banner_id = "example_character"
+banner_name = "Example Character Banner"
+banner_type = 0
+featured_5star = "res://src/main/resources/units/unit_05_fire_featured.tres"
+standard_5star_pool = Array[String](["res://src/main/resources/units/unit_05_water.tres"])
+unit_4star_pool = Array[String](["res://src/main/resources/units/unit_04_earth.tres", "res://src/main/resources/units/unit_04_starter_slot.tres"])
+unit_3star_pool = Array[String](["res://src/main/resources/units/unit_03_fire.tres", "res://src/main/resources/units/unit_03_earth.tres", "res://src/main/resources/units/unit_03_electric.tres", "res://src/main/resources/units/unit_03_water.tres", "res://src/main/resources/units/unit_03_light.tres", "res://src/main/resources/units/unit_03_dark.tres"])
+starter_slot_path = "res://src/main/resources/units/unit_04_starter_slot.tres"
+starter_pool = Array[String](["res://src/main/resources/units/starters/kael.tres", "res://src/main/resources/units/starters/kira.tres", "res://src/main/resources/units/starters/sela.tres", "res://src/main/resources/units/starters/bren.tres", "res://src/main/resources/units/starters/lys.tres", "res://src/main/resources/units/starters/vael.tres"])

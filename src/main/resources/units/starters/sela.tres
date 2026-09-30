@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" uid="uid://ct1pg5piqn6nx" path="res://src/main/scripts/Combat/UnitData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+unit_name = "Sela"
+unit_id = "0003"
+lore = "Sela does not fight wars. She ends them. Her presence on a battlefield has a way of making the wounded remember what they were fighting for in the first place.
+
+Kit (wire as Resources later): Skill Tidal Mend · Passive Undertow · Leader Current's Blessing. Role: Healer / Support."
+element = 4
+is_friend = true
+base_hp = 980
+base_atk = 200
+base_def = 210
+base_elem_res = 170
+base_spd = 115
+base_crit_dmg = 1.2
+current_level = 1
+current_xp = 0.0
+star_level = 1
+max_level = 20
+skill_bar_max = 100

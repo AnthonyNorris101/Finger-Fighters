@@ -21,7 +21,7 @@ godot --headless --path /workspace --quit-after 3
 
 ### Key caveats
 - **No traditional lint/test commands**: This project has no `npm`, `pip`, CI configs, or test frameworks. Validation is done via `godot --headless --import` (checks GDScript parsing/class registration) and running scenes with `--quit-after`.
-- **Missing unit `.tres` files**: The `GachaTest.gd` script references unit resource files (`res://src/main/resources/units/*.tres`) that are not yet committed. This causes runtime `push_error()` messages (not crashes) — the system falls back to placeholder units. This is expected.
+- **Gacha resources**: Banner/unit/gear `.tres` under `src/main/resources/` are committed. Dev sim is `GachaSystem.tscn` + `GachaSimTest.gd` (`AUTO_RUN` off by default). Anthony API: `docs/GACHA_INTEGRATION.md`.
 - **UID warning**: On first import you may see `Unrecognized UID: "uid://8gx6bjwgk5om"` — this resolves itself after the `.godot/` cache directory is built by `--import`.
 - **`--quit-after` flag**: Use `--quit-after <seconds>` to auto-terminate headless scene runs. Without it, scenes run indefinitely.
 - **No `.godot/` in repo**: The `.godot/` directory (editor cache, imported resources) is gitignored. Run `godot --headless --path /workspace --import` to regenerate it.

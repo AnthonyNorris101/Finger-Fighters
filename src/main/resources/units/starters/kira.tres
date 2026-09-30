@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" uid="uid://ct1pg5piqn6nx" path="res://src/main/scripts/Combat/UnitData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+unit_name = "Kira"
+unit_id = "0002"
+lore = "Kira was never trained — she was forged. Every scar on her arms is a lesson learned the only way she knew how: by getting too close to the fire and refusing to step back.
+
+Kit (wire as Resources later): Skill Ember Cascade · Passive Afterburn · Leader Warcry of Cinders. Role: Attacker (AoE)."
+element = 1
+is_friend = true
+base_hp = 850
+base_atk = 310
+base_def = 150
+base_elem_res = 100
+base_spd = 130
+base_crit_dmg = 1.25
+current_level = 1
+current_xp = 0.0
+star_level = 1
+max_level = 20
+skill_bar_max = 100

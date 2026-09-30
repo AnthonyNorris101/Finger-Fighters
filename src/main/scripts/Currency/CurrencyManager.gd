@@ -3,19 +3,14 @@
 # Autoload singleton — Project > Project Settings > Autoload
 # Name: "CurrencyManager"
 #
-# Single source of truth for Coins and Summon Tickets.
+# Single source of truth for Coins, Summon Tickets, and Gear Tickets.
 # Nothing else should mutate these values directly.
 # Materials and stackable items are handled by InventoryManager.
 #
-# CURRENCIES (from rpg_design_doc_v2):
-#   COINS          — Soft grind currency. Earned through normal play.
-#   SUMMON_TICKETS — Gacha stub. Full summon design TBD.
-#
 # SAVE / LOAD:
-#   Balances are persisted to user://currency_save.tres via
-#   CurrencyRecord (a typed Resource). Call save() after any
-#   transaction you want to persist between sessions.
-#   load_save() is called automatically in _ready().
+#   Balances live in user://player_save.res (PlayerSave) with pity + collection.
+#   Use write_balances_into / load_from_player_save for gacha transactions.
+#   save() / load_save() write currency fields only (shop / boot helpers).
 # ─────────────────────────────────────────────────────────────
 extends Node
 
@@ -27,6 +22,7 @@ extends Node
 enum Currency {
 	COINS,
 	SUMMON_TICKETS,
+	GEAR_TICKETS,
 }
 
 
@@ -45,14 +41,13 @@ signal balance_changed(currency: Currency, new_amount: int, delta: int)
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────
 
-const SAVE_PATH: String = "user://currency_save.tres"
-
 # Absolute cap per Currency — prevents overflow from runaway reward
 # loops. Values are intentionally generous placeholders; tune during
 # economy balancing.
 const CURRENCY_CAP: Dictionary = {
 	Currency.COINS:          999_999_999,
 	Currency.SUMMON_TICKETS: 9_999,
+	Currency.GEAR_TICKETS:   9_999,
 }
 
 
@@ -63,6 +58,7 @@ const CURRENCY_CAP: Dictionary = {
 var _balances: Dictionary = {
 	Currency.COINS:          0,
 	Currency.SUMMON_TICKETS: 0,
+	Currency.GEAR_TICKETS:   0,
 }
 
 
@@ -151,37 +147,42 @@ func spend_batch(currency_costs: Dictionary) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# SAVE / LOAD
+# SAVE / LOAD  (PlayerSave — user://player_save.res)
 # ─────────────────────────────────────────────────────────────
 
+func write_balances_into(save: PlayerSave) -> void:
+	save.coin_balance = _balances[Currency.COINS]
+	save.summon_ticket_balance = _balances[Currency.SUMMON_TICKETS]
+	save.gear_ticket_balance = _balances[Currency.GEAR_TICKETS]
+
+
+func load_from_player_save(save: PlayerSave = null) -> void:
+	if save == null:
+		save = PlayerSave.load_or_create()
+	_balances[Currency.COINS] = int(save.coin_balance)
+	_balances[Currency.SUMMON_TICKETS] = int(save.summon_ticket_balance)
+	_balances[Currency.GEAR_TICKETS] = int(save.gear_ticket_balance)
+
+
 func save() -> void:
-	var record := CurrencyRecord.new()
-	record.coin_balance   = _balances[Currency.COINS]
-	record.ticket_balance = _balances[Currency.SUMMON_TICKETS]
-	var err := ResourceSaver.save(record, SAVE_PATH)
-	if err != OK:
-		push_error("CurrencyManager.save() failed — error code %d" % err)
+	# Shop / rewards: update currency fields only; keep pity/collection.
+	var save := PlayerSave.load_or_create()
+	write_balances_into(save)
+	save.save_to_disk()
 
 
 func load_save() -> void:
-	if not ResourceLoader.exists(SAVE_PATH):
-		return  # Fresh install — defaults already set in _balances
-	var record = ResourceLoader.load(SAVE_PATH)
-	if not record is CurrencyRecord:
-		push_error("CurrencyManager.load_save(): save file is not a CurrencyRecord")
-		return
-	_balances[Currency.COINS]          = record.coin_balance
-	_balances[Currency.SUMMON_TICKETS] = record.ticket_balance
+	load_from_player_save()
+	# One-time cleanup of old wallet file (Anthony wipe OK).
+	var old_path := "user://currency_save.tres"
+	if FileAccess.file_exists(old_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(old_path))
 
 
-# Wipes all balances and deletes the save file.
-# Use for "New Game" or debug reset — not exposed to normal players.
 func reset_all() -> void:
 	for key in _balances:
 		_balances[key] = 0
-	if ResourceLoader.exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-
+	save()
 
 # ─────────────────────────────────────────────────────────────
 # DEBUG
@@ -191,4 +192,5 @@ func debug_print() -> void:
 	print("── CurrencyManager ─────────────────────────────────")
 	print("  Coins:          %d" % _balances[Currency.COINS])
 	print("  Summon Tickets: %d" % _balances[Currency.SUMMON_TICKETS])
+	print("  Gear Tickets:   %d" % _balances[Currency.GEAR_TICKETS])
 	print("────────────────────────────────────────────────────")
