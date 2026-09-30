@@ -46,6 +46,9 @@ var _pity: Dictionary = {
 # }
 var current_banner : Dictionary = {}
 
+## When false, skip per-pull print (sims / bulk runs).
+var log_pulls: bool = true
+
 # ── Player save (pity hydrate on boot; C3 persists after pulls) ───────────────
 var _player_save: PlayerSave
 
@@ -474,6 +477,8 @@ func _make_fallback_result(rarity: int) -> Dictionary:
 
 
 func _log_pull(result: Dictionary) -> void:
+	if not log_pulls:
+		return
 	var stars := "★".repeat(result["rarity"])
 	var label := "???"
 	if result.get("unit") != null:

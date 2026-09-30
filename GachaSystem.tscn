@@ -1,8 +1,12 @@
 [gd_scene format=3 uid="uid://dau5ic7onrkjl"]
 
 [ext_resource type="Script" uid="uid://baea4c3h8ywm2" path="res://src/main/scripts/systems/GachaTest.gd" id="2_4ehq3"]
+[ext_resource type="Script" path="res://src/main/scripts/systems/GachaSimTest.gd" id="3_sim"]
 
 [node name="Node" type="Node" unique_id=298195317]
 
 [node name="GachaTest" type="Node" parent="." unique_id=782010609]
 script = ExtResource("2_4ehq3")
+
+[node name="GachaSimTest" type="Node" parent="."]
+script = ExtResource("3_sim")
