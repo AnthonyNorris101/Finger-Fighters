@@ -86,7 +86,7 @@ First own → roster; dupe → shards (3★=5, 4★=20, 5★=50). Applied on pul
 
 ## Dev test scene
 
-`GachaSystem.tscn` + `GachaTest.gd` auto-runs step tests. Before shipping: set `GachaTest.AUTO_RUN = false` (or remove the node). Main game scene does not load this.
+`GachaSystem.tscn` + `GachaSimTest.gd` — seeded 10k rate sim. `AUTO_RUN` is **false** by default; set `true` to run, then flip back off. `GachaTest.gd` is a no-op stub.
 
 ## Out of scope (Anthony later)
 

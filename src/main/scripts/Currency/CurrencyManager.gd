@@ -3,19 +3,14 @@
 # Autoload singleton — Project > Project Settings > Autoload
 # Name: "CurrencyManager"
 #
-# Single source of truth for Coins and Summon Tickets.
+# Single source of truth for Coins, Summon Tickets, and Gear Tickets.
 # Nothing else should mutate these values directly.
 # Materials and stackable items are handled by InventoryManager.
 #
-# CURRENCIES (from rpg_design_doc_v2):
-#   COINS          — Soft grind currency. Earned through normal play.
-#   SUMMON_TICKETS — Gacha stub. Full summon design TBD.
-#
 # SAVE / LOAD:
-#   Balances are persisted to user://currency_save.tres via
-#   CurrencyRecord (a typed Resource). Call save() after any
-#   transaction you want to persist between sessions.
-#   load_save() is called automatically in _ready().
+#   Balances live in user://player_save.res (PlayerSave) with pity + collection.
+#   Use write_balances_into / load_from_player_save for gacha transactions.
+#   save() / load_save() write currency fields only (shop / boot helpers).
 # ─────────────────────────────────────────────────────────────
 extends Node
 
@@ -45,8 +40,6 @@ signal balance_changed(currency: Currency, new_amount: int, delta: int)
 # ─────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────
-
-const SAVE_PATH: String = "user://currency_save.tres"
 
 # Absolute cap per Currency — prevents overflow from runaway reward
 # loops. Values are intentionally generous placeholders; tune during

@@ -3,11 +3,11 @@ extends Resource
 
 ## Unified player save. One atomic write for currency + pity + collection.
 ## Disk path: user://player_save.res
-## CurrencyManager still writes currency_save.tres until Phase D.
+## CurrencyManager reads/writes balances through this Resource (not a separate wallet file).
 
 const SAVE_PATH := "user://player_save.res"
 
-# Currency stubs — Phase D migrates CurrencyManager onto these.
+# Currency — hydrated / written by CurrencyManager helpers.
 @export var coin_balance: int = 0
 @export var summon_ticket_balance: int = 0
 @export var gear_ticket_balance: int = 0

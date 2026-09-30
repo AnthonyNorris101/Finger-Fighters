@@ -1,6 +1,6 @@
 # GachaSystem.gd
-# Place at: src/main/scripts/systems/GachaSystem.gd
-# Attach to: GachaSystem.tscn (Node)
+# Autoload singleton — Project > Project Settings > Autoload
+# Name: "GachaSystem"
 #
 # Works with Anthony's UnitData Resource system.
 # Banner pools reference .tres file paths — the system loads and duplicates

@@ -2,7 +2,7 @@
 # Seeded rate sim — G1. Attach under GachaSystem.tscn. Does not spend or save.
 extends Node
 
-const AUTO_RUN := true
+const AUTO_RUN := false
 const SIM_SEED := 42
 const PULL_COUNT := 10000
 
