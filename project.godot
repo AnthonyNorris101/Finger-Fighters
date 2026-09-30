@@ -19,6 +19,8 @@ config/icon="res://src/main/resources/icon.svg"
 
 ElementSystem="*uid://8gx6bjwgk5om"
 CurrencyManager="*uid://da6mfp40fu836"
+PlayerCollection="*uid://7j5e56ab5t0j"
+GachaSystem="*uid://dv4w3w5lqa58u"
 
 [physics]
 

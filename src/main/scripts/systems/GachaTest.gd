@@ -1,11 +1,15 @@
 # GachaTest.gd
-# Temporary test script — delete before shipping!
-# Attach to a new Node in GachaSystem.tscn as a child of the main Node.
-# Phase E step tests.
+# Dev step tests on GachaSystem.tscn. Gate with AUTO_RUN before shipping.
 extends Node
+
+## Set false (or remove this node) before shipping builds.
+const AUTO_RUN := true
 
 
 func _ready() -> void:
+	if not AUTO_RUN:
+		print("[GachaTest] AUTO_RUN false — skipped")
+		return
 	_test_e2_duplicate_shards()
 	_test_e3_collection_in_player_save()
 
@@ -13,7 +17,9 @@ func _ready() -> void:
 func _test_e2_duplicate_shards() -> void:
 	print("\n=== E2 TEST: first own + duplicate → shards ===")
 
-	var collection := PlayerCollection.new()
+	var collection = PlayerCollection
+	collection.owned_unit_ids.clear()
+	collection.shards_by_unit_id.clear()
 
 	var unit := UnitData.new()
 	unit.unit_id = "test_fire_03"
@@ -98,7 +104,7 @@ func _test_e2_duplicate_shards() -> void:
 func _test_e3_collection_in_player_save() -> void:
 	print("\n=== E3 TEST: collection + shards in PlayerSave ===")
 
-	var gacha = get_parent()
+	var gacha = GachaSystem
 	PlayerSave.delete_save_file()
 	gacha.load_player_save()
 

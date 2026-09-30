@@ -1,4 +1,3 @@
-class_name PlayerCollection
 extends Node
 
 ## In-memory roster + shards. Duplicate conversion = E2. Persist = E3.

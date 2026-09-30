@@ -48,7 +48,6 @@ var current_banner : Dictionary = {}
 
 # ── Player save (pity hydrate on boot; C3 persists after pulls) ───────────────
 var _player_save: PlayerSave
-var _collection: PlayerCollection
 
 # ── Signals ───────────────────────────────────────────────────────────────────
 ## Emitted after every single pull resolves (legacy Dictionary bridge).
@@ -74,10 +73,9 @@ func load_player_save() -> void:
 	get_collection().load_from_player_save(_player_save)
 
 
-func get_collection() -> PlayerCollection:
-	if _collection == null:
-		_collection = PlayerCollection.new()
-	return _collection
+func get_collection():
+	return PlayerCollection
+
 
 
 func get_player_save() -> PlayerSave:
